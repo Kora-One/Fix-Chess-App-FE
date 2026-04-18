@@ -1,0 +1,191 @@
+/* The Main Card Container */
+.analyzer-container {
+  max-width: 600px;
+  margin: 40px auto;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  padding: 30px;
+  background-color: #ffffff; 
+  border-radius: 16px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.04);
+}
+
+h2 {
+  color: #2c2c2c;
+  margin-top: 0;
+  text-align: center;
+  margin-bottom: 25px;
+}
+
+input {
+  width: 100%;
+  padding: 14px;
+  margin-bottom: 20px;
+  font-size: 16px;
+  border-radius: 10px;
+  border: 1px solid #e0e0e0;
+  background-color: #fafafa;
+  color: #333;
+  box-sizing: border-box;
+  transition: border-color 0.2s;
+}
+
+input:focus {
+  outline: none;
+  border-color: #4caf50;
+  background-color: #ffffff;
+}
+
+/* Mood Buttons - High Contrast Design */
+.mood-board {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.btn {
+  flex: 1;
+  padding: 12px 10px;
+  border: 2px solid transparent;
+  border-radius: 30px; 
+  cursor: pointer;
+  font-weight: bold;
+  font-size: 14px;
+  transition: all 0.2s ease-in-out;
+  
+  /* High-contrast inactive state */
+  background-color: #e2e8f0; 
+  color: #334155; 
+}
+
+.btn:hover { 
+  background-color: #cbd5e1; 
+  color: #0f172a;
+}
+
+/* The Active (Selected) States */
+.btn-roast.active { 
+  background-color: #dc2626; 
+  color: #ffffff; 
+  transform: scale(1.05); 
+  box-shadow: 0 4px 12px rgba(220, 38, 38, 0.3);
+}
+
+.btn-humor.active { 
+  background-color: #facc15; 
+  color: #1c1917; 
+  transform: scale(1.05); 
+  box-shadow: 0 4px 12px rgba(250, 204, 21, 0.3);
+}
+
+.btn-sad.active { 
+  background-color: #2563eb; 
+  color: #ffffff; 
+  transform: scale(1.05); 
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+}
+
+.btn-straight.active { 
+  background-color: #334155; 
+  color: #ffffff; 
+  transform: scale(1.05); 
+  box-shadow: 0 4px 12px rgba(51, 65, 85, 0.3);
+}
+
+/* The Error Text */
+.error-text {
+  color: #dc2626;
+  text-align: center;
+  font-weight: 600;
+  margin-top: 20px;
+  animation: shake 0.4s;
+}
+
+/* The Big Analyze Button */
+.btn-analyze {
+  width: 100%;
+  padding: 16px;
+  margin-top: 20px;
+  background-color: #4caf50;
+  color: white;
+  border: none;
+  border-radius: 10px;
+  font-size: 18px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: all 0.2s;
+  box-shadow: 0 4px 12px rgba(76, 175, 80, 0.2);
+}
+
+.btn-analyze:hover {
+  background-color: #43a047;
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgba(76, 175, 80, 0.3);
+}
+
+.btn-analyze:active {
+  transform: translateY(1px);
+}
+
+/* Progress Bar */
+.loader-container { 
+  margin-top: 25px; 
+  text-align: center; 
+  font-weight: 500; 
+  color: #555; 
+}
+
+.progress-bar-bg { 
+  width: 100%; 
+  height: 12px; 
+  background-color: #f0f0f0; 
+  border-radius: 10px; 
+  overflow: hidden; 
+  margin-top: 10px; 
+}
+
+.progress-bar-fill { 
+  height: 100%; 
+  background-color: #4caf50; 
+  width: 0%; 
+  transition: width 0.3s ease-out; 
+  border-radius: 10px; 
+}
+
+/* Result Formatting */
+.result-box { 
+  margin-top: 25px; 
+  padding: 25px; 
+  background-color: #fafafa; 
+  border-radius: 12px; 
+  border-left: 5px solid #4caf50; 
+}
+
+.markdown-output { 
+  line-height: 1.7; 
+  color: #333; 
+}
+
+.markdown-output h3 { 
+  color: #1a1a1a; 
+  margin-top: 1.5em; 
+  border-bottom: 2px solid #eaeaea; 
+  padding-bottom: 8px; 
+}
+
+.markdown-output ul { 
+  padding-left: 20px; 
+  margin-top: 10px; 
+}
+
+.markdown-output li { 
+  margin-bottom: 8px; 
+}
+
+@keyframes shake {
+  0% { transform: translateX(0); }
+  25% { transform: translateX(-5px); }
+  50% { transform: translateX(5px); }
+  75% { transform: translateX(-5px); }
+  100% { transform: translateX(0); }
+}

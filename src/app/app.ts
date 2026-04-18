@@ -1,5 +1,5 @@
 import { Component, ChangeDetectorRef } from '@angular/core';
-import { DecimalPipe } from '@angular/common'; // Replaced CommonModule with just the pipe
+import { DecimalPipe } from '@angular/common'; 
 import { FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
 import { marked } from 'marked'; 
@@ -7,7 +7,7 @@ import { marked } from 'marked';
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [DecimalPipe, FormsModule], // Ultra-lean imports
+  imports: [DecimalPipe, FormsModule], 
   templateUrl: './app.html',
   styleUrls: ['./app.css']
 })
@@ -15,6 +15,9 @@ export class App {
   username = '';
   report = '';
   
+  selectedPlatform = '';
+  showPlatformError = false;
+
   selectedMood = '';
   showMoodError = false;
 
@@ -24,14 +27,22 @@ export class App {
 
   constructor(private http: HttpClient, private cdr: ChangeDetectorRef) {}
 
+  selectPlatform(platform: string) {
+    this.selectedPlatform = platform;
+    this.showPlatformError = false; 
+  }
+
   selectMood(mood: string) {
     this.selectedMood = mood;
-    this.showMoodError = false;
+    this.showMoodError = false; 
   }
 
   getAnalysis() {
+    if (!this.selectedPlatform) {
+      this.showPlatformError = true;
+      return;
+    }
     if (!this.username) return;
-    
     if (!this.selectedMood) {
       this.showMoodError = true;
       return;
@@ -42,18 +53,24 @@ export class App {
     this.startFakeProgress();
     this.cdr.detectChanges();
     
-    const backendUrl = `https://chess-backend.gentlestone-e692d061.centralindia.azurecontainerapps.io/api/analyze/${this.username}/${this.selectedMood}`;
+    // Ensure this points to Azure for production or localhost:8080 for local testing
+    const backendUrl = `https://chess-backend.gentlestone-e692d061.centralindia.azurecontainerapps.io/api/analyze/${this.selectedPlatform}/${this.username}/${this.selectedMood}`;
     
     this.http.get(backendUrl, { responseType: 'text' }).subscribe({
       next: async (data) => {
         this.finishProgress();
-        this.report = await marked.parse(data); 
+        // Catch backend error strings passed to frontend
+        if (data.startsWith("Error")) {
+            this.report = `<h3>⚠️ Request Failed</h3><p>${data}</p>`;
+        } else {
+            this.report = await marked.parse(data); 
+        }
         this.cdr.detectChanges();
       },
       error: (err) => {
         console.error('HTTP Error:', err);
         this.resetProgress();
-        this.report = '❌ Failed to fetch analysis. Did Gemini blunder?';
+        this.report = '<h3>❌ Failed to fetch analysis</h3><p>Could not reach the server. Did Gemini blunder?</p>';
         this.cdr.detectChanges();
       }
     });

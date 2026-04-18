@@ -1,7 +1,24 @@
 <div class="analyzer-container">
   <h2>FixChess AI Analyzer</h2>
   
-  <input type="text" [(ngModel)]="username" placeholder="Enter Chess.com Username" [disabled]="loading" />
+  @if (!loading) {
+    <div class="platform-board">
+      <button class="btn-plat chesscom" [class.active]="selectedPlatform === 'chesscom'" (click)="selectPlatform('chesscom')">
+        <span class="icon">♟️</span> Chess.com
+      </button>
+      <button class="btn-plat lichess" [class.active]="selectedPlatform === 'lichess'" (click)="selectPlatform('lichess')">
+        <span class="icon">🐴</span> Lichess.org
+      </button>
+    </div>
+  }
+
+  @if (showPlatformError) {
+    <p class="error-text">⚠️ Please select a platform first!</p>
+  }
+
+  <input type="text" [(ngModel)]="username" 
+         [placeholder]="selectedPlatform ? 'Enter ' + (selectedPlatform === 'chesscom' ? 'Chess.com' : 'Lichess') + ' Username' : 'Select a platform first...'" 
+         [disabled]="loading || !selectedPlatform" />
 
   @if (!loading) {
     <div class="mood-board">

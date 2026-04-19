@@ -11,10 +11,7 @@
       </button>
     </div>
   }
-
-  @if (showPlatformError) {
-    <p class="error-text">⚠️ Please select a platform first!</p>
-  }
+  @if (showPlatformError) { <p class="error-text">⚠️ Please select a platform first!</p> }
 
   <input type="text" [(ngModel)]="username" 
          [placeholder]="selectedPlatform ? 'Enter ' + (selectedPlatform === 'chesscom' ? 'Chess.com' : 'Lichess') + ' Username' : 'Select a platform first...'" 
@@ -28,29 +25,42 @@
       <button class="btn btn-straight" [class.active]="selectedMood === 'straight'" (click)="selectMood('straight')">♟️ Straight</button>
     </div>
   }
-
-  @if (showMoodError) {
-    <p class="error-text">⚠️ Please choose a mood before analyzing!</p>
-  }
+  @if (showMoodError) { <p class="error-text">⚠️ Please choose a mood before analyzing!</p> }
 
   @if (!loading) {
-    <button class="btn-analyze" (click)="getAnalysis()">
-      Analyze Game
-    </button>
+    <button class="btn-analyze" (click)="getAnalysis()">Analyze Game</button>
   }
 
-  @if (loading) {
-    <div class="loader-container">
-      <p>Analyzing games... {{ progressPercentage | number:'1.0-0' }}%</p>
-      <div class="progress-bar-bg">
-        <div class="progress-bar-fill" [style.width.%]="progressPercentage"></div>
+  @if (loading || report || trendLoading || trendProgress > 0) {
+    <div class="results-container">
+      
+      <div class="tab-header">
+        <button [class.active]="activeTab === 'analysis'" (click)="switchTab('analysis')">📝 AI Analysis</button>
+        <button [class.active]="activeTab === 'trend'" (click)="switchTab('trend')">📊 20-Game Trend</button>
       </div>
-    </div>
-  }
 
-  @if (report && !loading) {
-    <div class="result-box">
-      <div class="markdown-output" [innerHTML]="report"></div>
+      <div class="tab-content" [class.hidden]="activeTab !== 'analysis'">
+        @if (loading) {
+          <div class="loader-container">
+            <p>Gemini is writing your report... {{ progressPercentage | number:'1.0-0' }}%</p>
+            <div class="progress-bar-bg"><div class="progress-bar-fill" [style.width.%]="progressPercentage"></div></div>
+          </div>
+        }
+        @if (report && !loading) { <div class="markdown-output" [innerHTML]="report"></div> }
+      </div>
+      
+      <div class="tab-content" [class.hidden]="activeTab !== 'trend'">
+        @if (trendLoading) {
+          <div class="loader-container stockfish-loader">
+            <p>Calculating 20-game accuracy trend... {{ trendProgress }}%</p>
+            <div class="progress-bar-bg"><div class="progress-bar-fill stockfish-fill" [style.width.%]="trendProgress"></div></div>
+          </div>
+        }
+        <div class="chart-container" [class.hidden]="trendLoading">
+          <canvas id="trendChart"></canvas>
+        </div>
+      </div>
+
     </div>
   }
 </div>

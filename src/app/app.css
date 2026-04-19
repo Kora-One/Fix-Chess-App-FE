@@ -1,163 +1,58 @@
-.analyzer-container {
-  max-width: 600px;
-  margin: 40px auto;
-  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-  padding: 30px;
-  background-color: #ffffff; 
-  border-radius: 16px;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.04);
-}
+.analyzer-container { max-width: 600px; margin: 40px auto; font-family: 'Segoe UI', Tahoma, sans-serif; padding: 30px; background-color: #ffffff; border-radius: 16px; box-shadow: 0 8px 24px rgba(0, 0, 0, 0.04); }
+h2 { color: #2c2c2c; margin-top: 0; text-align: center; margin-bottom: 25px; }
 
-h2 {
-  color: #2c2c2c;
-  margin-top: 0;
-  text-align: center;
-  margin-bottom: 25px;
-}
-
-/* Platform Board */
-.platform-board {
-  display: flex;
-  gap: 15px;
-  margin-bottom: 20px;
-}
-
-.btn-plat {
-  flex: 1;
-  padding: 12px;
-  border: 2px solid #e2e8f0;
-  border-radius: 12px;
-  background-color: #f8fafc;
-  color: #64748b;
-  font-size: 16px;
-  font-weight: bold;
-  cursor: pointer;
-  transition: all 0.2s;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-}
-
-.btn-plat:hover {
-  background-color: #f1f5f9;
-  border-color: #cbd5e1;
-}
-
-.btn-plat.chesscom.active {
-  background-color: #7fa650; 
-  border-color: #7fa650;
-  color: white;
-  box-shadow: 0 4px 12px rgba(127, 166, 80, 0.3);
-  transform: translateY(-2px);
-}
-
-.btn-plat.lichess.active {
-  background-color: #ffffff; 
-  border-color: #1a1a1a; 
-  color: #1a1a1a;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-  transform: translateY(-2px);
-}
+/* Platforms */
+.platform-board { display: flex; gap: 15px; margin-bottom: 20px; }
+.btn-plat { flex: 1; padding: 12px; border: 2px solid #e2e8f0; border-radius: 12px; background-color: #f8fafc; color: #64748b; font-size: 16px; font-weight: bold; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; justify-content: center; gap: 8px; }
+.btn-plat:hover { background-color: #f1f5f9; border-color: #cbd5e1; }
+.btn-plat.chesscom.active { background-color: #7fa650; border-color: #7fa650; color: white; box-shadow: 0 4px 12px rgba(127, 166, 80, 0.3); transform: translateY(-2px); }
+.btn-plat.lichess.active { background-color: #ffffff; border-color: #1a1a1a; color: #1a1a1a; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1); transform: translateY(-2px); }
 
 /* Input */
-input {
-  width: 100%;
-  padding: 14px;
-  margin-bottom: 20px;
-  font-size: 16px;
-  border-radius: 10px;
-  border: 1px solid #e0e0e0;
-  background-color: #fafafa;
-  color: #333;
-  box-sizing: border-box;
-  transition: border-color 0.2s;
-}
+input { width: 100%; padding: 14px; margin-bottom: 20px; font-size: 16px; border-radius: 10px; border: 1px solid #e0e0e0; background-color: #fafafa; color: #333; box-sizing: border-box; transition: border-color 0.2s; }
+input:focus { outline: none; border-color: #4caf50; background-color: #ffffff; }
+input:disabled { background-color: #f0f0f0; cursor: not-allowed; }
 
-input:focus {
-  outline: none;
-  border-color: #4caf50;
-  background-color: #ffffff;
-}
-input:disabled {
-  background-color: #f0f0f0;
-  cursor: not-allowed;
-}
-
-/* Mood Buttons */
-.mood-board {
-  display: flex;
-  gap: 10px;
-  flex-wrap: wrap;
-  justify-content: center;
-}
-
-.btn {
-  flex: 1;
-  padding: 12px 10px;
-  border: 2px solid transparent;
-  border-radius: 30px; 
-  cursor: pointer;
-  font-weight: bold;
-  font-size: 14px;
-  transition: all 0.2s ease-in-out;
-  background-color: #e2e8f0; 
-  color: #334155; 
-}
-
+/* Moods */
+.mood-board { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
+.btn { flex: 1; padding: 12px 10px; border: 2px solid transparent; border-radius: 30px; cursor: pointer; font-weight: bold; font-size: 14px; transition: all 0.2s ease-in-out; background-color: #e2e8f0; color: #334155; }
 .btn:hover { background-color: #cbd5e1; color: #0f172a; }
-
 .btn-roast.active { background-color: #dc2626; color: #ffffff; transform: scale(1.05); box-shadow: 0 4px 12px rgba(220, 38, 38, 0.3); }
 .btn-humor.active { background-color: #facc15; color: #1c1917; transform: scale(1.05); box-shadow: 0 4px 12px rgba(250, 204, 21, 0.3); }
 .btn-sad.active { background-color: #2563eb; color: #ffffff; transform: scale(1.05); box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3); }
 .btn-straight.active { background-color: #334155; color: #ffffff; transform: scale(1.05); box-shadow: 0 4px 12px rgba(51, 65, 85, 0.3); }
 
-/* Errors & Final Button */
-.error-text {
-  color: #dc2626;
-  text-align: center;
-  font-weight: 600;
-  margin-top: 10px;
-  margin-bottom: 10px;
-  animation: shake 0.4s;
-}
-
-.btn-analyze {
-  width: 100%;
-  padding: 16px;
-  margin-top: 20px;
-  background-color: #4caf50;
-  color: white;
-  border: none;
-  border-radius: 10px;
-  font-size: 18px;
-  font-weight: bold;
-  cursor: pointer;
-  transition: all 0.2s;
-  box-shadow: 0 4px 12px rgba(76, 175, 80, 0.2);
-}
-
+/* General Controls */
+.error-text { color: #dc2626; text-align: center; font-weight: 600; margin: 10px 0; animation: shake 0.4s; }
+.btn-analyze { width: 100%; padding: 16px; margin-top: 20px; background-color: #4caf50; color: white; border: none; border-radius: 10px; font-size: 18px; font-weight: bold; cursor: pointer; transition: all 0.2s; box-shadow: 0 4px 12px rgba(76, 175, 80, 0.2); }
 .btn-analyze:hover { background-color: #43a047; transform: translateY(-1px); box-shadow: 0 6px 16px rgba(76, 175, 80, 0.3); }
-.btn-analyze:active { transform: translateY(1px); }
 
-/* Progress Loader */
-.loader-container { margin-top: 25px; text-align: center; font-weight: 500; color: #555; }
-.progress-bar-bg { width: 100%; height: 12px; background-color: #f0f0f0; border-radius: 10px; overflow: hidden; margin-top: 10px; }
+/* Tabs & Containers */
+.results-container { margin-top: 30px; background-color: #fafafa; border-radius: 12px; border: 1px solid #eaeaea; overflow: hidden; }
+.tab-header { display: flex; background-color: #f1f5f9; border-bottom: 2px solid #e2e8f0; }
+.tab-header button { flex: 1; padding: 15px; border: none; background: transparent; font-size: 15px; font-weight: bold; color: #64748b; cursor: pointer; transition: all 0.2s; outline: none; }
+.tab-header button:hover { background-color: #e2e8f0; }
+.tab-header button.active { background-color: #ffffff; color: #4caf50; border-bottom: 3px solid #4caf50; }
+.tab-content { padding: 25px; }
+.hidden { display: none !important; }
+
+/* Loaders */
+.loader-container { text-align: center; font-weight: 500; color: #555; }
+.progress-bar-bg { width: 100%; height: 12px; background-color: #e2e8f0; border-radius: 10px; overflow: hidden; margin-top: 10px; }
 .progress-bar-fill { height: 100%; background-color: #4caf50; width: 0%; transition: width 0.3s ease-out; border-radius: 10px; }
+.stockfish-loader .stockfish-fill { background-color: #2563eb; }
+
+/* Chart Container Fix */
+.chart-container {
+  position: relative;
+  height: 400px; /* Forces a strict height so Chart.js doesn't draw a 0px graph */
+  width: 100%;
+}
 
 /* Markdown Result */
-.result-box { 
-  margin-top: 25px; padding: 25px; background-color: #fafafa; border-radius: 12px; border-left: 5px solid #4caf50; 
-}
 .markdown-output { line-height: 1.7; color: #333; }
-.markdown-output h3 { color: #1a1a1a; margin-top: 1.5em; border-bottom: 2px solid #eaeaea; padding-bottom: 8px; }
+.markdown-output h3 { color: #1a1a1a; margin-top: 1em; border-bottom: 2px solid #eaeaea; padding-bottom: 8px; }
 .markdown-output ul { padding-left: 20px; margin-top: 10px; }
 .markdown-output li { margin-bottom: 8px; }
 
-@keyframes shake {
-  0% { transform: translateX(0); }
-  25% { transform: translateX(-5px); }
-  50% { transform: translateX(5px); }
-  75% { transform: translateX(-5px); }
-  100% { transform: translateX(0); }
-}
+@keyframes shake { 0%, 100% { transform: translateX(0); } 25%, 75% { transform: translateX(-5px); } 50% { transform: translateX(5px); } }

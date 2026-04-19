@@ -1,42 +1,43 @@
 <div class="analyzer-container">
   <h2>FixChess AI Analyzer</h2>
   
-  @if (!loading) {
-    <div class="platform-board">
-      <button class="btn-plat chesscom" [class.active]="selectedPlatform === 'chesscom'" (click)="selectPlatform('chesscom')">
-        <span class="icon">♟️</span> Chess.com
-      </button>
-      <button class="btn-plat lichess" [class.active]="selectedPlatform === 'lichess'" (click)="selectPlatform('lichess')">
-        <span class="icon">🐴</span> Lichess.org
-      </button>
-    </div>
-  }
+  <div class="platform-board">
+    <button class="btn-plat chesscom" [class.active]="selectedPlatform === 'chesscom'" [disabled]="loading" (click)="selectPlatform('chesscom')">
+      <span class="icon">♟️</span> Chess.com
+    </button>
+    <button class="btn-plat lichess" [class.active]="selectedPlatform === 'lichess'" [disabled]="loading" (click)="selectPlatform('lichess')">
+      <span class="icon">🐴</span> Lichess.org
+    </button>
+  </div>
+  
   @if (showPlatformError) { <p class="error-text">⚠️ Please select a platform first!</p> }
 
   <input type="text" [(ngModel)]="username" 
          [placeholder]="selectedPlatform ? 'Enter ' + (selectedPlatform === 'chesscom' ? 'Chess.com' : 'Lichess') + ' Username' : 'Select a platform first...'" 
-         [disabled]="loading || !selectedPlatform" />
+         [disabled]="!selectedPlatform" />
 
-  @if (!loading) {
-    <div class="mood-board">
-      <button class="btn btn-roast" [class.active]="selectedMood === 'roast'" (click)="selectMood('roast')">🔥 Roast</button>
-      <button class="btn btn-humor" [class.active]="selectedMood === 'humor'" (click)="selectMood('humor')">😂 Humor</button>
-      <button class="btn btn-sad" [class.active]="selectedMood === 'sad'" (click)="selectMood('sad')">🎻 Dramatic</button>
-      <button class="btn btn-straight" [class.active]="selectedMood === 'straight'" (click)="selectMood('straight')">♟️ Straight</button>
-    </div>
-  }
+  <div class="mood-board">
+    <button class="btn btn-roast" [class.active]="selectedMood === 'roast'" [disabled]="loading" (click)="selectMood('roast')">🔥 Roast</button>
+    <button class="btn btn-humor" [class.active]="selectedMood === 'humor'" [disabled]="loading" (click)="selectMood('humor')">😂 Humor</button>
+    <button class="btn btn-sad" [class.active]="selectedMood === 'sad'" [disabled]="loading" (click)="selectMood('sad')">🎻 Dramatic</button>
+    <button class="btn btn-straight" [class.active]="selectedMood === 'straight'" [disabled]="loading" (click)="selectMood('straight')">♟️ Straight</button>
+  </div>
+  
   @if (showMoodError) { <p class="error-text">⚠️ Please choose a mood before analyzing!</p> }
 
-  @if (!loading) {
-    <button class="btn-analyze" (click)="getAnalysis()">Analyze Game</button>
-  }
-
-  @if (loading || report || trendLoading || trendProgress > 0) {
+  <button class="btn-analyze" 
+          [disabled]="(loading && username === analyzingUsername) || !username" 
+          (click)="getAnalysis()">
+    {{ (loading && username === analyzingUsername) ? 'Analyzing...' : (loading ? 'Restart Analysis' : 'Analyze Game') }}
+  </button>
+  
+  @if (loading || report || trendLoading || trendProgress > 0 || openingLoading) {
     <div class="results-container">
       
       <div class="tab-header">
         <button [class.active]="activeTab === 'analysis'" (click)="switchTab('analysis')">📝 AI Analysis</button>
         <button [class.active]="activeTab === 'trend'" (click)="switchTab('trend')">📊 20-Game Trend</button>
+        <button [class.active]="activeTab === 'openings'" (click)="switchTab('openings')">🎯 Openings</button>
       </div>
 
       <div class="tab-content" [class.hidden]="activeTab !== 'analysis'">
@@ -44,6 +45,21 @@
           <div class="loader-container">
             <p>Gemini is writing your report... {{ progressPercentage | number:'1.0-0' }}%</p>
             <div class="progress-bar-bg"><div class="progress-bar-fill" [style.width.%]="progressPercentage"></div></div>
+          </div>
+        }
+        
+        @if (noGamesFound && !loading) {
+          <div class="markdown-output" style="text-align: center; padding-top: 20px;">
+            <h3 style="color: #dc2626;">⚠️ Username Not Found</h3>
+            <p>We could not pull data for <b>{{ analyzingUsername }}</b>. Please check the following:</p>
+            
+            <div style="display: inline-block; text-align: left; margin-top: 10px; background: #f8fafc; padding: 15px 30px; border-radius: 8px; border: 1px solid #e2e8f0;">
+              <ul style="color: #475569; margin: 0; padding-left: 20px;">
+                <li><i>Verify the spelling of the username is perfectly accurate.</i></li>
+                <li><i>Ensure you have the correct platform toggled at the top (Chess.com vs Lichess).</i></li>
+                <li><i>Confirm this account has actually played standard chess games.</i></li>
+              </ul>
+            </div>
           </div>
         }
         @if (report && !loading) { <div class="markdown-output" [innerHTML]="report"></div> }
@@ -56,9 +72,80 @@
             <div class="progress-bar-bg"><div class="progress-bar-fill stockfish-fill" [style.width.%]="trendProgress"></div></div>
           </div>
         }
-        <div class="chart-container" [class.hidden]="trendLoading">
+        
+        @if (noGamesFound && !trendLoading) {
+          <div class="markdown-output" style="text-align: center; padding-top: 20px;">
+            <h3 style="color: #dc2626;">⚠️ Username Not Found</h3>
+            <p>Could not fetch any games for <b>{{ analyzingUsername }}</b> on this platform. Please check the spelling and try again!</p>
+          </div>
+        }
+
+        <div class="chart-container" [class.hidden]="trendLoading || noGamesFound">
           <canvas id="trendChart"></canvas>
         </div>
+      </div>
+
+      <div class="tab-content" [class.hidden]="activeTab !== 'openings'">
+        @if (openingLoading) {
+          <div class="loader-container">
+            <p>Analyzing opening repertoire...</p>
+          </div>
+        }
+        
+        @if (noGamesFound && !openingLoading) {
+          <div class="markdown-output" style="text-align: center; padding-top: 20px;">
+            <h3 style="color: #dc2626;">⚠️ Username Not Found</h3>
+            <p>Could not fetch any games for <b>{{ analyzingUsername }}</b> on this platform. Please check the spelling and try again!</p>
+          </div>
+        }
+        
+        @if (!openingLoading && openingStats.length > 0) {
+          <div class="overall-summary">
+            <h3>Recent Form (Last 20 Games)</h3>
+            <div class="stacked-bar large-bar">
+              <div class="bar win" [style.width.%]="overallStats.winPct" [title]="overallStats.wins + ' Wins'"></div>
+              <div class="bar draw" [style.width.%]="overallStats.drawPct" [title]="overallStats.draws + ' Draws'"></div>
+              <div class="bar loss" [style.width.%]="overallStats.lossPct" [title]="overallStats.losses + ' Losses'"></div>
+            </div>
+            <div class="bar-labels large-labels">
+              <span>{{ overallStats.wins }} Wins ({{ overallStats.winPct | number:'1.0-0' }}%)</span>
+              <span>{{ overallStats.draws }} Draws ({{ overallStats.drawPct | number:'1.0-0' }}%)</span>
+              <span>{{ overallStats.losses }} Losses ({{ overallStats.lossPct | number:'1.0-0' }}%)</span>
+            </div>
+          </div>
+          <table class="opening-table">
+            <thead>
+              <tr>
+                <th>Opening Played</th>
+                <th>Win / Draw / Loss %</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (stat of openingStats; track stat.id) {
+                <tr>
+                  <td>
+                    <div class="opening-name">{{ stat.name }}</div>
+                    <div class="opening-color" [class.white]="stat.color === 'White'" [class.black]="stat.color === 'Black'">
+                      As {{ stat.color }}
+                    </div>
+                  </td>
+                  <td class="bar-cell">
+                    <div class="stacked-bar">
+                      <div class="bar win" [style.width.%]="stat.winPct" [title]="stat.wins + ' Wins'"></div>
+                      <div class="bar draw" [style.width.%]="stat.drawPct" [title]="stat.draws + ' Draws'"></div>
+                      <div class="bar loss" [style.width.%]="stat.lossPct" [title]="stat.losses + ' Losses'"></div>
+                    </div>
+                    <div class="bar-labels">
+                      <span>{{ stat.wins }}W ({{ stat.winPct | number:'1.0-0' }}%)</span>
+                      <span>{{ stat.draws }}D</span>
+                      <span>{{ stat.losses }}L ({{ stat.lossPct | number:'1.0-0' }}%)</span>
+                    </div>
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        }
       </div>
 
     </div>

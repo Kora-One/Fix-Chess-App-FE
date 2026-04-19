@@ -1,11 +1,12 @@
 import { Component, ChangeDetectorRef } from '@angular/core';
-import { environment } from '../environments/environment';
 import { DecimalPipe } from '@angular/common'; 
 import { FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
+import { Subscription } from 'rxjs'; // ⚡ ADDED for canceling API calls
 import { marked } from 'marked'; 
 import { Chess } from 'chess.js';
 import Chart from 'chart.js/auto';
+import { environment } from '../environments/environment';
 
 @Component({
   selector: 'app-root',
@@ -17,12 +18,14 @@ import Chart from 'chart.js/auto';
 export class App {
   // --- UI State ---
   username = '';
+  analyzingUsername = '';
   report = '';
   selectedPlatform = '';
   showPlatformError = false;
   selectedMood = '';
   showMoodError = false;
   activeTab = 'analysis';
+  noGamesFound = false;
 
   // --- AI Loading State ---
   loading = false;
@@ -33,6 +36,16 @@ export class App {
   trendChart: any;
   trendLoading = false;
   trendProgress = 0;
+
+  // --- Graph State (Openings) ---
+  overallStats = { wins: 0, draws: 0, losses: 0, winPct: 0, drawPct: 0, lossPct: 0 };
+  openingStats: any[] = [];
+  openingLoading = false;
+
+  // --- ⚡ Cancellation Tracking ⚡ ---
+  private currentAnalysisId = 0; 
+  private activeWorkers: Worker[] = [];
+  private analysisSub?: Subscription;
 
   constructor(private http: HttpClient, private cdr: ChangeDetectorRef) {}
 
@@ -60,10 +73,32 @@ export class App {
     }, 50);
   }
 
+  // ⚡ NEW METHOD: Instantly kills old API calls and Stockfish calculations
+  cancelCurrentAnalysis() {
+    this.currentAnalysisId++; 
+    
+    if (this.analysisSub) {
+      this.analysisSub.unsubscribe(); 
+    }
+    
+    this.activeWorkers.forEach(worker => worker.terminate()); 
+    this.activeWorkers = [];
+
+    this.loading = false;
+    this.trendLoading = false;
+    this.openingLoading = false;
+    this.noGamesFound = false; // ⚡ ADD THIS
+    clearInterval(this.progressInterval);
+  }
+
   getAnalysis() {
     if (!this.selectedPlatform) { this.showPlatformError = true; return; }
     if (!this.username) return;
     if (!this.selectedMood) { this.showMoodError = true; return; }
+    
+    this.cancelCurrentAnalysis(); // ⚡ Instantly kill anything that is currently running
+
+    this.analyzingUsername = this.username; // Lock in the new username
     
     this.loading = true;
     this.report = '';
@@ -71,17 +106,18 @@ export class App {
     this.startFakeProgress();
     this.cdr.detectChanges();
     
-    // Fire off the background Web Worker for the trend graph
+    // Fire off the background graphs
     this.generateTrendGraph();
+    this.generateOpeningGraph();
 
-    // We use environment.apiUrl so it automatically switches based on where it's running!
     const backendUrl = `${environment.apiUrl}/analyze/${this.selectedPlatform}/${this.username}/${this.selectedMood}`;
     
-    this.http.get(backendUrl, { responseType: 'text' }).subscribe({
+    // ⚡ Assign the HTTP call to analysisSub so we can cancel it later
+    this.analysisSub = this.http.get(backendUrl, { responseType: 'text' }).subscribe({
       next: async (data) => {
         this.finishProgress();
         if (data.startsWith("Error")) {
-            this.report = `<h3>⚠️ Request Failed</h3><p>${data}</p>`;
+            this.report = ` `;
         } else {
             this.report = await marked.parse(data); 
         }
@@ -101,9 +137,15 @@ export class App {
     this.trendProgress = 0;
     if (this.trendChart) this.trendChart.destroy();
 
+    const thisAnalysis = this.currentAnalysisId; // ⚡ Take a snapshot of the current ID
+
     try {
       const pgns = await this.fetchMultipleGames(20);
+      
+      if (this.currentAnalysisId !== thisAnalysis) return; // ⚡ Escape if canceled!
+      
       if (!pgns || pgns.length === 0) {
+        this.noGamesFound = true;
         this.trendLoading = false;
         return;
       }
@@ -112,6 +154,8 @@ export class App {
       const gameLabels: string[] = [];
 
       for (let i = 0; i < pgns.length; i++) {
+        if (this.currentAnalysisId !== thisAnalysis) return; // ⚡ Escape if canceled!
+
         const accuracy = await this.calculateSingleGameAccuracy(pgns[i], this.username);
         accuracies.push(accuracy);
         gameLabels.push(`Game ${i + 1}`);
@@ -122,9 +166,10 @@ export class App {
       this.trendLoading = false;
       this.cdr.detectChanges();
 
-      // Give the browser 50ms to hide the loading bar before Chart.js draws the graph
       setTimeout(() => {
-        this.drawTrendChart(gameLabels, accuracies);
+        if (this.currentAnalysisId === thisAnalysis) {
+          this.drawTrendChart(gameLabels, accuracies);
+        }
       }, 50);
 
     } catch (err) {
@@ -146,7 +191,6 @@ export class App {
     const headers = chess.header() as Record<string, string>;
     const isWhite = headers["White"]?.toLowerCase() === playerUsername.toLowerCase();
 
-    // Generate ALL the FENs upfront
     const history = chess.history();
     const fens: string[] = [new Chess().fen()]; 
     const tempChess = new Chess();
@@ -156,12 +200,13 @@ export class App {
     }
 
     const worker = new Worker("stockfish.js");
+    this.activeWorkers.push(worker); // ⚡ Track this worker so we can kill it if the user clicks restart!
+
     let currentFenIndex = 0;
     let moveAccuracies: number[] = [];
     let previousWhiteEval = 0; 
     let currentWhiteEval = 0; 
 
-    // Exponential decay math (Lichess/Chess.com style)
     const cpLossToAccuracy = (loss: number): number => {
       const acc = 100 * Math.exp(-loss / 200);
       return Math.max(0, Math.min(100, acc));
@@ -179,12 +224,10 @@ export class App {
 
       const resetFailsafe = () => {
         clearTimeout(failsafeTimer);
-        
-        // ⚡ Prevent the Checkmate Hang
         const timeoutTime = (currentFenIndex === fens.length - 1) ? 100 : 5000;
-        
         failsafeTimer = setTimeout(() => { 
           worker.terminate(); 
+          this.activeWorkers = this.activeWorkers.filter(w => w !== worker); // ⚡ Remove from tracking
           resolveFinalAccuracy();
         }, timeoutTime); 
       };
@@ -193,7 +236,6 @@ export class App {
         const line = event.data;
         const isBlackTurn = fens[currentFenIndex].includes(' b ');
 
-        // Parse score and convert to Absolute White Advantage
         if (line.includes("score cp")) {
           const match = line.match(/score cp (-?\d+)/);
           if (match) {
@@ -209,7 +251,6 @@ export class App {
           }
         }
 
-        // Process the math when Stockfish finishes the depth search
         if (line.startsWith("bestmove")) {
           if (currentFenIndex > 0) {
             const whiteJustMoved = isBlackTurn;
@@ -244,6 +285,7 @@ export class App {
             worker.postMessage("go depth 10"); 
           } else {
             worker.terminate();
+            this.activeWorkers = this.activeWorkers.filter(w => w !== worker); // ⚡ Remove from tracking
             resolveFinalAccuracy();
           }
         }
@@ -254,6 +296,96 @@ export class App {
       worker.postMessage(`position fen ${fens[currentFenIndex]}`);
       worker.postMessage("go depth 10");
     });
+  }
+
+  // --- OPENING REPERTOIRE GRAPH ---
+  async generateOpeningGraph() {
+    this.openingLoading = true;
+    this.openingStats = []; 
+    this.overallStats = { wins: 0, draws: 0, losses: 0, winPct: 0, drawPct: 0, lossPct: 0 };
+    let totalGames = 0;
+
+    const thisAnalysis = this.currentAnalysisId; // ⚡ Snapshot ID
+
+    try {
+      const pgns = await this.fetchMultipleGames(20);
+      
+      if (this.currentAnalysisId !== thisAnalysis) return; // ⚡ Escape if canceled!
+
+      if (!pgns || pgns.length === 0) {
+        this.noGamesFound = true;
+        this.openingLoading = false;
+        return;
+      }
+
+      const stats: Record<string, any> = {};
+
+      for (let pgn of pgns) {
+        const chess = new Chess();
+        try { chess.loadPgn(pgn); } catch (err) { continue; }
+
+        const headers = chess.header() as Record<string, string>;
+        const isWhite = headers['White']?.toLowerCase() === this.username.toLowerCase();
+        const result = headers['Result']; 
+
+        let opening = headers['Opening'];
+
+        if (!opening && headers['ECOUrl']) {
+          const urlMatch = headers['ECOUrl'].match(/\/openings\/([^/]+)/);
+          if (urlMatch) {
+            opening = urlMatch[1].split(/-\d+\./)[0].replace(/-/g, ' ');
+          }
+        }
+
+        opening = opening || headers['ECO'] || 'Unknown Opening';
+        opening = opening.split(':')[0].trim(); 
+        const colorPlayed = isWhite ? 'White' : 'Black';
+        
+        const key = `${opening}-${colorPlayed}`;
+
+        if (!stats[key]) {
+          stats[key] = { id: key, name: opening, color: colorPlayed, wins: 0, losses: 0, draws: 0 };
+        }
+
+        if (result === '1/2-1/2') {
+          stats[key].draws++;
+          this.overallStats.draws++;
+        } else if ((isWhite && result === '1-0') || (!isWhite && result === '0-1')) {
+          stats[key].wins++;
+          this.overallStats.wins++;
+        } else {
+          stats[key].losses++;
+          this.overallStats.losses++;
+        }
+        
+        totalGames++;
+      }
+
+      if (totalGames > 0) {
+        this.overallStats.winPct = (this.overallStats.wins / totalGames) * 100;
+        this.overallStats.drawPct = (this.overallStats.draws / totalGames) * 100;
+        this.overallStats.lossPct = (this.overallStats.losses / totalGames) * 100;
+      }
+
+      this.openingStats = Object.values(stats).map((s: any) => {
+        const total = s.wins + s.losses + s.draws;
+        return {
+          ...s,
+          total: total,
+          winPct: (s.wins / total) * 100,
+          drawPct: (s.draws / total) * 100,
+          lossPct: (s.losses / total) * 100
+        };
+      }).sort((a, b) => b.total - a.total); 
+
+      this.openingLoading = false;
+      this.cdr.detectChanges();
+
+    } catch (err) {
+      console.error("❌ OPENING GRAPH ERROR:", err);
+      this.openingLoading = false;
+      this.cdr.detectChanges();
+    }
   }
 
   // --- API HELPER ---
@@ -306,7 +438,7 @@ export class App {
     }
   }
 
-  // --- CHART ---
+  // --- CHARTS ---
   drawTrendChart(labels: string[], data: number[]) {
     const canvas = document.getElementById('trendChart') as HTMLCanvasElement;
     if (!canvas) return;

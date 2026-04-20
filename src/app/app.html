@@ -63,6 +63,15 @@
           </div>
         }
         @if (report && !loading) { <div class="markdown-output" [innerHTML]="report"></div> }
+        @if (report && !loading && !noGamesFound) { 
+          <div class="markdown-output" [innerHTML]="report"></div> 
+          
+          <div class="download-card-container">
+            <button class="btn-download" (click)="downloadCard()">
+              📸 Download Player Card (JPG)
+            </button>
+          </div>
+        }
       </div>
       
       <div class="tab-content" [class.hidden]="activeTab !== 'trend'">
@@ -150,4 +159,14 @@
 
     </div>
   }
+  <div class="export-wrapper">
+    <div id="player-card-export" class="player-card">
+      <div class="card-title">{{ analyzingUsername }}</div>
+      <div class="card-platform">{{ selectedPlatform === 'chesscom' ? 'Chess.com' : 'Lichess.org' }}</div>
+      <div class="card-animal">{{ cardData.animal }}</div>
+      <div class="card-rating-title">Peak Rating</div>
+      <div class="card-rating">{{ cardData.rating }}</div>
+      <div class="card-tagline">"{{ cardData.tagline }}"</div>
+    </div>
+  </div>
 </div>

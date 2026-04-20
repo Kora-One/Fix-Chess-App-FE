@@ -112,6 +112,7 @@ button:disabled {
 /* --- Hidden Player Card for Export --- */
 .export-wrapper { position: absolute; left: -9999px; top: -9999px; }
 .player-card {
+  position: relative; /* ⚡ REQUIRED: Tells the absolute logo to stay inside the card! */
   width: 400px;
   height: 550px;
   background: linear-gradient(145deg, #0f172a, #1e293b);
@@ -128,8 +129,20 @@ button:disabled {
   font-family: 'Segoe UI', Tahoma, sans-serif;
 }
 .card-title { font-size: 28px; font-weight: 900; margin-bottom: 5px; color: #4caf50; letter-spacing: 1px; }
-.card-platform { font-size: 14px; color: #94a3b8; text-transform: uppercase; letter-spacing: 3px; margin-bottom: 30px; }
-.card-animal { font-size: 120px; margin: 10px 0 30px 0; filter: drop-shadow(0 8px 16px rgba(0,0,0,0.5)); }
+.card-logo { 
+  position: absolute;
+  top: 25px;
+  left: 25px;
+  height: 35px; 
+  object-fit: contain; 
+}
+.card-animal { 
+  font-size: 120px; 
+  margin: 10px 0 30px 0; 
+  filter: drop-shadow(0 8px 16px rgba(0,0,0,0.5)); 
+  /* ⚡ FIX: Forces html2canvas to render the emoji correctly! */
+  font-family: "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif; 
+}
 .card-rating-title { font-size: 14px; color: #cbd5e1; text-transform: uppercase; letter-spacing: 2px; }
 .card-rating { font-size: 48px; font-weight: 900; margin-bottom: 20px; color: #facc15; }
 .card-tagline { font-size: 18px; font-style: italic; color: #e2e8f0; padding: 0 30px; line-height: 1.5; font-weight: 600; }

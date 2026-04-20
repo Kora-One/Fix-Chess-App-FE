@@ -326,7 +326,9 @@ export class App {
   downloadCard() {
     const el = document.getElementById('player-card-export');
     if (!el) return;
-    html2canvas(el, { scale: 2, backgroundColor: null }).then(c => {
+    
+    // ⚡ NEW: Added useCORS: true so it knows it is allowed to draw the images!
+    html2canvas(el, { scale: 2, backgroundColor: null, useCORS: true }).then(c => {
       const link = document.createElement('a');
       link.download = `${this.analyzingUsername}-FixChess-Card.jpg`;
       link.href = c.toDataURL('image/jpeg', 0.95);

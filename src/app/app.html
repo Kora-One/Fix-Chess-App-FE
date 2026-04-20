@@ -161,12 +161,15 @@
   }
   <div class="export-wrapper">
     <div id="player-card-export" class="player-card">
+      
+      <img class="card-logo" [src]="selectedPlatform === 'chesscom' ? 'chesscom.png' : 'lichess.png'" alt="Platform Logo">
+      
       <div class="card-title">{{ analyzingUsername }}</div>
-      <div class="card-platform">{{ selectedPlatform === 'chesscom' ? 'Chess.com' : 'Lichess.org' }}</div>
       <div class="card-animal">{{ cardData.animal }}</div>
       <div class="card-rating-title">Peak Rating</div>
       <div class="card-rating">{{ cardData.rating }}</div>
       <div class="card-tagline">"{{ cardData.tagline }}"</div>
+      
     </div>
   </div>
 </div>

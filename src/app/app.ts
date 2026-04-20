@@ -303,24 +303,32 @@ export class App {
   }
 
   // --- PLAYER CARD LOGIC ---
+  // --- PLAYER CARD LOGIC ---
   async fetchPlayerStats() {
     try {
-      const res = await fetch(`${environment.apiUrl}/stats/${this.selectedPlatform}/${this.username}`);
-      const data = res.ok ? await res.json() : { rating: 1200 };
+      // 1. Fetch their rating from your backend
+      const statsRes = await fetch(`${environment.apiUrl}/stats/${this.selectedPlatform}/${this.username}`);
+      const data = statsRes.ok ? await statsRes.json() : { rating: 1200 };
       this.cardData.rating = data.rating || 1200;
-    } catch (e) { this.cardData.rating = 1200; }
-    
-    const id = this.getCardIdentity(this.cardData.rating);
-    this.cardData.animal = id.animal;
-    this.cardData.tagline = id.tagline;
-  }
 
-  getCardIdentity(r: number) {
-    if (r < 1000) return { animal: '🐹', tagline: 'A brave hamster spinning the tactical wheel.' };
-    if (r < 1500) return { animal: '🐱', tagline: 'An opportunistic stray cat. Chaotic and dangerous.' };
-    if (r < 2000) return { animal: '🦊', tagline: 'A sly fox. A cunning and tricky tactician.' };
-    if (r < 2500) return { animal: '🦅', tagline: 'A hunting falcon. Sharp vision and lethal strikes.' };
-    return { animal: '🐉', tagline: 'An absolute mythical monster on the board.' };
+      // 2. ⚡ Ask your backend to generate the AI Persona based on their rating and mood!
+      const currentMood = this.selectedMood || 'straight';
+      const identityRes = await fetch(`${environment.apiUrl}/identity/${this.username}/${this.cardData.rating}/${currentMood}`);
+      
+      if (identityRes.ok) {
+        const idData = await identityRes.json();
+        this.cardData.animal = idData.animal;
+        this.cardData.tagline = idData.tagline;
+      } else {
+        throw new Error("AI Identity fetch failed");
+      }
+
+    } catch (e) { 
+      // Safe fallback if APIs fail
+      this.cardData.rating = this.cardData.rating || 1200; 
+      this.cardData.animal = '♟️';
+      this.cardData.tagline = 'A mysterious tactician on the board.';
+    }
   }
 
   downloadCard() {

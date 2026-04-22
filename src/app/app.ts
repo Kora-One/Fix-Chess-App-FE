@@ -198,11 +198,6 @@ export class App {
       if (this.currentAnalysisId === thisAnalysis) {
         this.drawTrendChart(gameLabels, accOverall);
         this.drawPhaseCharts(gameLabels, accOpen, accMid, accEnd);
-        
-        // ⚡ NEW: The moment the loading finishes, force the first puzzle to load!
-        if (this.puzzles.length > 0) {
-          this.loadPuzzle(0);
-        }
       }
     }, 50);
   }
@@ -320,18 +315,15 @@ export class App {
     this.currentPuzzleIndex = index;
     this.cdr.detectChanges(); 
     
-    // ⚡ Bumped to 100ms to guarantee Angular has fully drawn the HTML before we try to modify it
     setTimeout(() => {
       if (this.boardView) {
         const board = this.boardView.nativeElement;
-        
-        // ⚡ FIX: Use the strict property setter for the Web Component
-        board.position = this.puzzles[index].fen;
+        board.setPosition(this.puzzles[index].fen);
         
         // Auto-flip the board if it's Black's turn!
         board.orientation = this.puzzles[index].fen.includes(' b ') ? 'black' : 'white';
       }
-    }, 100); 
+    }, 50);
   }
 
   onPuzzleMove(event: any) {

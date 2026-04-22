@@ -216,14 +216,14 @@
             <div class="puzzle-board-area">
               <div class="puzzle-instruction">
                 <h4>Game {{ puzzles[currentPuzzleIndex].gameNumber }} Analysis</h4>
-                <p>You played <b style="color: #dc2626; font-size: 1.1em;">{{ puzzles[currentPuzzleIndex].playedMove }}</b> and completely lost your advantage.</p>
-                <p>Can you find the engine's best move?</p>
+                <p>You played <b style="color: #dc2626; font-size: 1.1em;">{{ puzzles[currentPuzzleIndex].playedMove }}</b> but there was a better option.</p>
+                <p>Can you find it?</p>
                 
                 @if (puzzles[currentPuzzleIndex].status === 'solved') {
-                  <div class="success-banner">Brilliant! You found the Stockfish continuation! 🎉</div>
+                  <div class="success-banner">Brilliant! You found it! 🎉</div>
                 }
                 @if (puzzles[currentPuzzleIndex].status === 'failed') {
-                  <div class="error-banner">Not quite... try to find a stronger tactic!</div>
+                  <div class="error-banner">Not quite... try again!</div>
                 }
               </div>
               
@@ -235,7 +235,10 @@
                 </chess-board>
               </div>
               
-              <button class="btn-flip" (click)="flipBoard()">🔄 Flip Board</button>
+              <div style="display: flex; gap: 15px; margin-top: 15px;">
+                <button class="btn-flip" (click)="flipBoard()">🔄 Flip Board</button>
+                <button class="btn-hint" (click)="showHint()">💡 Show Hint</button>
+              </div>
             </div>
           </div>
         }

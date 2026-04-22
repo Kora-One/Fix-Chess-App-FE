@@ -195,5 +195,19 @@ button:disabled {
 .btn-flip { margin-top: 15px; padding: 10px 20px; background: #e2e8f0; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; color: #475569; transition: background 0.2s; }
 .btn-flip:hover { background: #cbd5e1; }
 
+/* ⚡ NEW: Hint Button Style */
+.btn-hint { 
+  margin-top: 15px;
+  padding: 10px 20px; 
+  background: #cfe5ff; 
+  border: none; 
+  border-radius: 8px; 
+  cursor: pointer; 
+  font-weight: bold; 
+  color: #475569; 
+  transition: background 0.2s; 
+}
+.btn-hint:hover { background: rgb(145, 196, 255); }
+
 @keyframes popIn { 0% { transform: scale(0.9); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
 @keyframes shake { 0%, 100% { transform: translateX(0); } 25%, 75% { transform: translateX(-5px); } 50% { transform: translateX(5px); } }

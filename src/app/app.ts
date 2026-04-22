@@ -198,6 +198,10 @@ export class App {
       if (this.currentAnalysisId === thisAnalysis) {
         this.drawTrendChart(gameLabels, accOverall);
         this.drawPhaseCharts(gameLabels, accOpen, accMid, accEnd);
+
+        if (this.activeTab === 'puzzles' && this.puzzles.length > 0) {
+          this.loadPuzzle(0);
+        }
       }
     }, 50);
   }
@@ -388,6 +392,33 @@ export class App {
     styleTag.innerHTML = `
       chess-board::part(${source}), chess-board::part(${target}) {
         background-color: rgba(255, 255, 51, 0.6) !important;
+      }
+    `;
+  }
+
+  // ⚡ NEW: Extracts the exact squares from Stockfish's best move and paints them blue!
+  showHint() {
+    const puzzle = this.puzzles[this.currentPuzzleIndex];
+    if (puzzle.status === 'solved') return; // Don't show hint if already solved
+
+    const bestMove = puzzle.bestMove; // e.g., "e2e4" or "e7e8q"
+    if (!bestMove || bestMove.length < 4) return;
+
+    // Isolate the start and end squares from the string
+    const source = bestMove.substring(0, 2); // gets "e2"
+    const target = bestMove.substring(2, 4); // gets "e4"
+
+    let styleTag = document.getElementById('puzzle-highlights');
+    if (!styleTag) {
+      styleTag = document.createElement('style');
+      styleTag.id = 'puzzle-highlights';
+      document.head.appendChild(styleTag);
+    }
+    
+    // Inject a beautiful blue highlight!
+    styleTag.innerHTML = `
+      chess-board::part(${source}), chess-board::part(${target}) {
+        background-color: rgba(59, 130, 246, 0.6) !important; 
       }
     `;
   }

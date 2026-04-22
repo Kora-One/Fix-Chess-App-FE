@@ -38,6 +38,7 @@
         <button [class.active]="activeTab === 'analysis'" (click)="switchTab('analysis')">📝 AI Analysis</button>
         <button [class.active]="activeTab === 'trend'" (click)="switchTab('trend')">📊 20-Game Trend</button>
         <button [class.active]="activeTab === 'openings'" (click)="switchTab('openings')">🎯 Openings</button>
+        <button [class.active]="activeTab === 'puzzles'" (click)="switchTab('puzzles')">🔥 Fix Blunders</button>
       </div>
 
       <div class="tab-content" [class.hidden]="activeTab !== 'analysis'">
@@ -58,6 +59,20 @@
                 <li><i>Verify the spelling of the username is perfectly accurate.</i></li>
                 <li><i>Ensure you have the correct platform toggled at the top (Chess.com vs Lichess).</i></li>
                 <li><i>Confirm this account has actually played standard chess games.</i></li>
+              </ul>
+            </div>
+          </div>
+        }
+        @if (apiError && !loading) {
+          <div class="markdown-output" style="text-align: center; padding-top: 20px;">
+            <h3 style="color: #f59e0b;">⚠️ AI Servers at Capacity</h3>
+            <p>Our AI provider is currently experiencing extremely high traffic and couldn't process your report.</p>
+            
+            <div style="display: inline-block; text-align: left; margin-top: 10px; background: #fffbeb; padding: 15px 30px; border-radius: 8px; border: 1px solid #fde68a;">
+              <ul style="color: #92400e; margin: 0; padding-left: 20px;">
+                <li><i><b>Don't worry, this is entirely on our end!</b></i></li>
+                <li><i>Your chess profile and games are perfectly fine.</i></li>
+                <li><i>Please wait about 60 seconds and click analyze again.</i></li>
               </ul>
             </div>
           </div>
@@ -164,7 +179,66 @@
           </table>
         }
       </div>
+      <div class="tab-content" [class.hidden]="activeTab !== 'puzzles'">
+        
+        @if (trendLoading) {
+          <div class="loader-container stockfish-loader">
+            <p>Scanning games for catastrophic blunders... {{ trendProgress }}%</p>
+            <div class="progress-bar-bg"><div class="progress-bar-fill stockfish-fill" [style.width.%]="trendProgress"></div></div>
+          </div>
+        }
 
+        @if (!trendLoading && puzzles.length === 0) {
+          <div class="markdown-output" style="text-align: center; padding-top: 20px;">
+            <h3 style="color: #4caf50;">🏆 Incredible!</h3>
+            <p>We couldn't find any massive, game-losing blunders in your recent games. You are playing remarkably solid chess!</p>
+          </div>
+        }
+
+        @if (!trendLoading && puzzles.length > 0) {
+          <div class="puzzle-container">
+            <div class="puzzle-sidebar">
+              <h3>Your Worst Moves</h3>
+              <div class="puzzle-list">
+                @for (p of puzzles; track p.gameNumber; let i = $index) {
+                  <button class="puzzle-item" 
+                          [class.active]="currentPuzzleIndex === i"
+                          [class.solved]="p.status === 'solved'"
+                          [class.failed]="p.status === 'failed'"
+                          (click)="loadPuzzle(i)">
+                    Game {{ p.gameNumber }}
+                    <span class="status-icon">{{ p.status === 'solved' ? '✅' : p.status === 'failed' ? '❌' : '♟️' }}</span>
+                  </button>
+                }
+              </div>
+            </div>
+
+            <div class="puzzle-board-area">
+              <div class="puzzle-instruction">
+                <h4>Game {{ puzzles[currentPuzzleIndex].gameNumber }} Analysis</h4>
+                <p>You played <b style="color: #dc2626; font-size: 1.1em;">{{ puzzles[currentPuzzleIndex].playedMove }}</b> and completely lost your advantage.</p>
+                <p>Can you find the engine's best move?</p>
+                
+                @if (puzzles[currentPuzzleIndex].status === 'solved') {
+                  <div class="success-banner">Brilliant! You found the Stockfish continuation! 🎉</div>
+                }
+                @if (puzzles[currentPuzzleIndex].status === 'failed') {
+                  <div class="error-banner">Not quite... try to find a stronger tactic!</div>
+                }
+              </div>
+              
+              <div class="board-wrapper">
+                <chess-board #board 
+                             (drop)="onPuzzleMove($event)" 
+                             style="width: 450px;">
+                </chess-board>
+              </div>
+              
+              <button class="btn-flip" (click)="flipBoard()">🔄 Flip Board</button>
+            </div>
+          </div>
+        }
+      </div>
     </div>
   }
   <div class="export-wrapper">

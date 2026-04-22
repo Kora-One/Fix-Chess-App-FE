@@ -19,6 +19,7 @@
     "@angular/router": "^21.2.0",
     "chart.js": "^4.5.1",
     "chess.js": "^1.4.0",
+    "chessboard-element": "^1.2.0",
     "html2canvas": "^1.4.1",
     "marked": "^17.0.4",
     "rxjs": "~7.8.0",

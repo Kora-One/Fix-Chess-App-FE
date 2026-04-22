@@ -1,4 +1,4 @@
-import { Component, ChangeDetectorRef } from '@angular/core';
+import { Component, ChangeDetectorRef, ViewChild, ElementRef, CUSTOM_ELEMENTS_SCHEMA } from '@angular/core';
 import { DecimalPipe } from '@angular/common'; 
 import { FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
@@ -7,11 +7,13 @@ import { marked } from 'marked';
 import { Chess } from 'chess.js';
 import Chart from 'chart.js/auto';
 import { environment } from '../environments/environment';
+import 'chessboard-element'; // The modern, native Web Component board!
 
 @Component({
   selector: 'app-root',
   standalone: true,
   imports: [DecimalPipe, FormsModule], 
+  schemas: [CUSTOM_ELEMENTS_SCHEMA], // Tells Angular to allow native <chess-board> HTML tags
   templateUrl: './app.html',
   styleUrls: ['./app.css']
 })
@@ -43,7 +45,14 @@ export class App {
   openingStats: any[] = [];
   openingLoading = false;
 
+  apiError = false;
+
   cardData = { rating: 0, animal: '♟️', tagline: '' };
+
+  // --- PUZZLE STATE ---
+  puzzles: any[] = [];
+  currentPuzzleIndex = 0;
+  @ViewChild('board') boardView!: ElementRef;
 
   // --- Cancellation Tracking ---
   private currentAnalysisId = 0; 
@@ -64,16 +73,20 @@ export class App {
         if (this.openChart) this.openChart.resize();
         if (this.midChart) this.midChart.resize();
         if (this.endChart) this.endChart.resize();
+      } else if (tab === 'puzzles' && this.puzzles.length > 0) {
+        this.loadPuzzle(this.currentPuzzleIndex); // Load the board when tab is clicked
       }
     }, 50);
   }
 
   cancelCurrentAnalysis() {
-    this.currentAnalysisId++; 
-    this.analysisSub?.unsubscribe(); 
-    this.activeWorkers.forEach(w => w.terminate()); 
+    this.currentAnalysisId++;
+    this.analysisSub?.unsubscribe();
+    this.activeWorkers.forEach(w => w.terminate());
     this.activeWorkers = [];
     this.loading = this.trendLoading = this.openingLoading = this.noGamesFound = false;
+    this.puzzles = [];
+    this.loading = this.trendLoading = this.openingLoading = this.noGamesFound = this.apiError = false;
     clearInterval(this.progressInterval);
   }
 
@@ -98,17 +111,30 @@ export class App {
     this.analysisSub = this.http.get(backendUrl, { responseType: 'text' }).subscribe({
       next: async (data) => {
         this.finishProgress();
+        
+        // If your backend specifically sends a text error starting with "Error"
         if (data.startsWith("Error")) {
-            this.noGamesFound = true;
+            // Check if the text implies a server/API issue
+            if (data.includes("503") || data.includes("500") || data.toLowerCase().includes("server")) {
+                this.apiError = true;
+            } else {
+                this.noGamesFound = true;
+            }
             this.report = '';
         } else {
             this.report = await marked.parse(data); 
         }
         this.cdr.detectChanges();
       },
-      error: () => {
+      error: (err) => {
         this.finishProgress();
-        this.noGamesFound = true;
+        // ⚡ NEW: If it's a 500, 503, or 504 from your Spring Boot server, show the API error!
+        if (err.status >= 500 || err.status === 0) {
+            this.apiError = true;
+        } else {
+            this.noGamesFound = true; // 404s usually mean the user wasn't found
+        }
+        this.cdr.detectChanges();
       }
     });
   }
@@ -117,6 +143,7 @@ export class App {
   async generateTrendGraph(pgnsPromise: Promise<string[]>) {
     this.trendLoading = true;
     this.trendProgress = 0;
+    this.puzzles = []; 
     
     if (this.trendChart) this.trendChart.destroy();
     if (this.openChart) this.openChart.destroy();
@@ -150,6 +177,15 @@ export class App {
       accMid.push(result.midgame);
       accEnd.push(result.endgame);
       gameLabels.push(`Game ${i + 1}`);
+
+      // Extract the worst blunder from this game for the puzzle tab
+      if (result.blunder) {
+        this.puzzles.push({
+          ...result.blunder,
+          gameNumber: i + 1,
+          status: 'pending' 
+        });
+      }
       
       this.trendProgress = Math.round(((i + 1) / pgns.length) * 100);
       this.cdr.detectChanges();
@@ -162,26 +198,33 @@ export class App {
       if (this.currentAnalysisId === thisAnalysis) {
         this.drawTrendChart(gameLabels, accOverall);
         this.drawPhaseCharts(gameLabels, accOpen, accMid, accEnd);
+        
+        // ⚡ NEW: The moment the loading finishes, force the first puzzle to load!
+        if (this.puzzles.length > 0) {
+          this.loadPuzzle(0);
+        }
       }
     }, 50);
   }
 
-  // ⚡ UPDATED: Returns accuracy split into 3 phases!
-  calculateSingleGameAccuracy(pgn: string, playerUsername: string): Promise<{overall: number, opening: number | null, midgame: number | null, endgame: number | null}> {
+  calculateSingleGameAccuracy(pgn: string, playerUsername: string): Promise<{overall: number, opening: number | null, midgame: number | null, endgame: number | null, blunder: any}> {
     const chess = new Chess();
-    try { chess.loadPgn(pgn); } catch (e) { return Promise.resolve({overall:0, opening:null, midgame:null, endgame:null}); }
+    try { chess.loadPgn(pgn); } catch (e) { return Promise.resolve({overall:0, opening:null, midgame:null, endgame:null, blunder:null}); }
 
     const isWhite = (chess.header() as any)["White"]?.toLowerCase() === playerUsername.toLowerCase();
+    const historySan = chess.history(); 
     const fens = [new Chess().fen()]; 
     const tempChess = new Chess();
-    chess.history().forEach(move => { tempChess.move(move); fens.push(tempChess.fen()); });
+    historySan.forEach(move => { tempChess.move(move); fens.push(tempChess.fen()); });
 
     const worker = new Worker("stockfish.js");
     this.activeWorkers.push(worker); 
 
     let currentFenIndex = 0, previousWhiteEval = 0, currentWhiteEval = 0; 
+    let previousBestMove = "";
+    let maxLoss = 0;
+    let gameBlunder: any = null;
     
-    // Arrays for different phases
     const openAcc: number[] = [];
     const midAcc: number[] = [];
     const endAcc: number[] = [];
@@ -201,7 +244,8 @@ export class App {
           overall: calcAvg(totalArr) || 0,
           opening: calcAvg(openAcc),
           midgame: calcAvg(midAcc),
-          endgame: calcAvg(endAcc)
+          endgame: calcAvg(endAcc),
+          blunder: gameBlunder 
         });
       };
 
@@ -223,6 +267,9 @@ export class App {
         }
 
         if (line.startsWith("bestmove")) {
+          const bestMoveMatch = line.match(/bestmove\s+(\S+)/);
+          const currentBestMove = bestMoveMatch ? bestMoveMatch[1] : "";
+
           if (currentFenIndex > 0) {
             let loss = 0;
             if (isWhite && isBlackTurn) loss = previousWhiteEval - currentWhiteEval; 
@@ -232,12 +279,22 @@ export class App {
               const accuracy = 100 * Math.exp(-Math.max(0, loss) / 200);
               const moveNumber = Math.ceil(currentFenIndex / 2);
               
-              // ⚡ Sort accuracy into the correct phase!
               if (moveNumber <= 10) openAcc.push(accuracy);
               else if (moveNumber <= 30) midAcc.push(accuracy);
               else endAcc.push(accuracy);
+
+              // If the loss is worse than 1.5 pawns, record it as a blunder
+              if (loss > 150 && loss > maxLoss) {
+                maxLoss = loss;
+                gameBlunder = {
+                    fen: fens[currentFenIndex - 1], 
+                    playedMove: historySan[currentFenIndex - 1], 
+                    bestMove: previousBestMove 
+                };
+              }
             }
           }
+          previousBestMove = currentBestMove;
           previousWhiteEval = currentWhiteEval;
           currentFenIndex++;
 
@@ -256,6 +313,55 @@ export class App {
       worker.postMessage(`position fen ${fens[currentFenIndex]}`);
       worker.postMessage("go depth 10");
     });
+  }
+
+  // --- PUZZLE LOGIC ---
+  loadPuzzle(index: number) {
+    this.currentPuzzleIndex = index;
+    this.cdr.detectChanges(); 
+    
+    // ⚡ Bumped to 100ms to guarantee Angular has fully drawn the HTML before we try to modify it
+    setTimeout(() => {
+      if (this.boardView) {
+        const board = this.boardView.nativeElement;
+        
+        // ⚡ FIX: Use the strict property setter for the Web Component
+        board.position = this.puzzles[index].fen;
+        
+        // Auto-flip the board if it's Black's turn!
+        board.orientation = this.puzzles[index].fen.includes(' b ') ? 'black' : 'white';
+      }
+    }, 100); 
+  }
+
+  onPuzzleMove(event: any) {
+    const puzzle = this.puzzles[this.currentPuzzleIndex];
+    if (puzzle.status === 'solved') {
+      event.detail.setAction('snapback'); // Prevent moving pieces after solved
+      return;
+    }
+
+    const source = event.detail.source; 
+    const target = event.detail.target; 
+    const userUci = source + target; 
+
+    if (this.checkMoveMatch(userUci, puzzle.bestMove)) {
+      puzzle.status = 'solved';
+    } else {
+      puzzle.status = 'failed';
+      event.detail.setAction('snapback'); // Snaps the piece back to its original square
+    }
+  }
+
+  checkMoveMatch(userUci: string, stockfishUci: string): boolean {
+    return stockfishUci.startsWith(userUci);
+  }
+
+  flipBoard() {
+    if (this.boardView) {
+      const board = this.boardView.nativeElement;
+      board.orientation = board.orientation === 'white' ? 'black' : 'white';
+    }
   }
 
   // --- OPENING REPERTOIRE GRAPH ---
@@ -331,16 +437,10 @@ export class App {
           borderWidth: 3, pointBackgroundColor: '#2563eb', pointRadius: 5, fill: true, tension: 0.4 
         }]
       },
-      options: { 
-        responsive: true, 
-        maintainAspectRatio: false, // ⚡ FIX: Add this line!
-        plugins: { legend: { display: false } }, 
-        scales: { y: { min: 0, max: 100 } } 
-      }
+      options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { min: 0, max: 100 } } }
     });
   }
 
-  // ⚡ NEW: Draws the three mini phase charts!
   drawPhaseCharts(labels: string[], open: (number|null)[], mid: (number|null)[], end: (number|null)[]) {
     const createChart = (id: string, label: string, color: string, data: (number|null)[], chartRef: string) => {
       const canvas = document.getElementById(id) as HTMLCanvasElement;
@@ -352,21 +452,19 @@ export class App {
           datasets: [{
             label: label, data: data, borderColor: color, backgroundColor: color + '1a',
             borderWidth: 2, pointBackgroundColor: color, pointRadius: 3, fill: true, tension: 0.4, 
-            spanGaps: true // Connects lines even if a short game has no endgame!
+            spanGaps: true
           }]
         },
         options: { 
-          responsive: true, 
-          maintainAspectRatio: false, 
+          responsive: true, maintainAspectRatio: false, 
           plugins: { legend: { display: false }, title: { display: true, text: label, color: '#64748b', font: {size: 14} } }, 
           scales: { y: { min: 0, max: 100, ticks: { display: false } }, x: { ticks: { display: false } } } 
         }
       });
     };
-
-    createChart('openChart', 'Opening (Moves 1-10)', '#10b981', open, 'openChart'); // Green
-    createChart('midChart', 'Middlegame (Moves 11-30)', '#f59e0b', mid, 'midChart'); // Orange
-    createChart('endChart', 'Endgame (Moves 31+)', '#8b5cf6', end, 'endChart');     // Purple
+    createChart('openChart', 'Opening (Moves 1-10)', '#10b981', open, 'openChart'); 
+    createChart('midChart', 'Middlegame (Moves 11-30)', '#f59e0b', mid, 'midChart'); 
+    createChart('endChart', 'Endgame (Moves 31+)', '#8b5cf6', end, 'endChart');     
   }
 
   // --- UI LOADERS ---
@@ -410,7 +508,5 @@ export class App {
     }
   }
 
-  downloadCard() {
-    window.location.href = `${environment.apiUrl}/card/${this.selectedPlatform}/${this.analyzingUsername}`;
-  }
+  downloadCard() { window.location.href = `${environment.apiUrl}/card/${this.selectedPlatform}/${this.analyzingUsername}`; }
 }

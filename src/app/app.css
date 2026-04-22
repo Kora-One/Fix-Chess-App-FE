@@ -171,4 +171,29 @@ button:disabled {
   border: 1px solid #e2e8f0;
 }
 
+/* --- ⚡ PUZZLE UI STYLES --- */
+.puzzle-container { display: flex; gap: 20px; margin-top: 10px; }
+.puzzle-sidebar { width: 220px; border-right: 2px solid #e2e8f0; padding-right: 20px; max-height: 550px; overflow-y: auto; }
+.puzzle-sidebar h3 { font-size: 1.1em; color: #334155; margin-top: 0; margin-bottom: 15px; }
+
+.puzzle-list { display: flex; flex-direction: column; gap: 8px; }
+.puzzle-item { display: flex; justify-content: space-between; padding: 12px 15px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; cursor: pointer; font-weight: bold; color: #475569; transition: all 0.2s; }
+.puzzle-item:hover { background: #e2e8f0; }
+.puzzle-item.active { background: #2563eb; color: white; border-color: #2563eb; }
+.puzzle-item.solved { border-left: 5px solid #22c55e; }
+.puzzle-item.failed { border-left: 5px solid #ef4444; }
+
+.puzzle-board-area { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; }
+.puzzle-instruction { text-align: center; margin-bottom: 20px; min-height: 120px; }
+.puzzle-instruction h4 { margin: 0 0 10px 0; color: #1e293b; font-size: 1.3em; border-bottom: 2px solid #e2e8f0; padding-bottom: 8px; }
+.puzzle-instruction p { margin: 5px 0; font-size: 1.05em; color: #475569; }
+
+.success-banner { background: #dcfce7; color: #166534; padding: 12px; border-radius: 8px; font-weight: bold; margin-top: 10px; border: 1px solid #bbf7d0; animation: popIn 0.3s; }
+.error-banner { background: #fee2e2; color: #991b1b; padding: 12px; border-radius: 8px; font-weight: bold; margin-top: 10px; border: 1px solid #fecaca; animation: shake 0.4s; }
+
+.board-wrapper { border: 4px solid #334155; border-radius: 6px; overflow: hidden; box-shadow: 0 10px 25px rgba(0,0,0,0.15); background: #334155; }
+.btn-flip { margin-top: 15px; padding: 10px 20px; background: #e2e8f0; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; color: #475569; transition: background 0.2s; }
+.btn-flip:hover { background: #cbd5e1; }
+
+@keyframes popIn { 0% { transform: scale(0.9); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
 @keyframes shake { 0%, 100% { transform: translateX(0); } 25%, 75% { transform: translateX(-5px); } 50% { transform: translateX(5px); } }

@@ -6,7 +6,6 @@ import { Subscription } from 'rxjs';
 import { marked } from 'marked'; 
 import { Chess } from 'chess.js';
 import Chart from 'chart.js/auto';
-import html2canvas from 'html2canvas'; 
 import { environment } from '../environments/environment';
 
 @Component({
@@ -34,6 +33,9 @@ export class App {
   private progressInterval: any;
   
   trendChart: any;
+  openChart: any;
+  midChart: any;
+  endChart: any;
   trendLoading = false;
   trendProgress = 0;
 
@@ -56,7 +58,14 @@ export class App {
   switchTab(tab: string) { 
     this.activeTab = tab; 
     this.cdr.detectChanges(); 
-    setTimeout(() => { if (tab === 'trend' && this.trendChart) this.trendChart.resize(); }, 50);
+    setTimeout(() => { 
+      if (tab === 'trend') {
+        if (this.trendChart) this.trendChart.resize();
+        if (this.openChart) this.openChart.resize();
+        if (this.midChart) this.midChart.resize();
+        if (this.endChart) this.endChart.resize();
+      }
+    }, 50);
   }
 
   cancelCurrentAnalysis() {
@@ -80,7 +89,6 @@ export class App {
     this.activeTab = 'analysis'; 
     this.startFakeProgress();
     
-    // ⚡ OPTIMIZATION: Fetch games ONCE and share the Promise with both graphs!
     const pgnsPromise = this.fetchMultipleGames(20);
     this.generateTrendGraph(pgnsPromise);
     this.generateOpeningGraph(pgnsPromise);
@@ -109,10 +117,15 @@ export class App {
   async generateTrendGraph(pgnsPromise: Promise<string[]>) {
     this.trendLoading = true;
     this.trendProgress = 0;
+    
     if (this.trendChart) this.trendChart.destroy();
-    const thisAnalysis = this.currentAnalysisId; 
+    if (this.openChart) this.openChart.destroy();
+    if (this.midChart) this.midChart.destroy();
+    if (this.endChart) this.endChart.destroy();
 
+    const thisAnalysis = this.currentAnalysisId; 
     const pgns = await pgnsPromise;
+    
     if (this.currentAnalysisId !== thisAnalysis) return; 
     
     if (!pgns.length) {
@@ -121,25 +134,42 @@ export class App {
       return;
     }
 
-    const accuracies: number[] = [];
+    const accOverall: number[] = [];
+    const accOpen: (number | null)[] = [];
+    const accMid: (number | null)[] = [];
+    const accEnd: (number | null)[] = [];
     const gameLabels: string[] = [];
 
     for (let i = 0; i < pgns.length; i++) {
       if (this.currentAnalysisId !== thisAnalysis) return; 
-      accuracies.push(await this.calculateSingleGameAccuracy(pgns[i], this.username));
+      
+      const result = await this.calculateSingleGameAccuracy(pgns[i], this.username);
+      
+      accOverall.push(result.overall);
+      accOpen.push(result.opening);
+      accMid.push(result.midgame);
+      accEnd.push(result.endgame);
       gameLabels.push(`Game ${i + 1}`);
+      
       this.trendProgress = Math.round(((i + 1) / pgns.length) * 100);
       this.cdr.detectChanges();
     }
 
     this.trendLoading = false;
     this.cdr.detectChanges();
-    setTimeout(() => { if (this.currentAnalysisId === thisAnalysis) this.drawTrendChart(gameLabels, accuracies); }, 50);
+    
+    setTimeout(() => { 
+      if (this.currentAnalysisId === thisAnalysis) {
+        this.drawTrendChart(gameLabels, accOverall);
+        this.drawPhaseCharts(gameLabels, accOpen, accMid, accEnd);
+      }
+    }, 50);
   }
 
-  calculateSingleGameAccuracy(pgn: string, playerUsername: string): Promise<number> {
+  // ⚡ UPDATED: Returns accuracy split into 3 phases!
+  calculateSingleGameAccuracy(pgn: string, playerUsername: string): Promise<{overall: number, opening: number | null, midgame: number | null, endgame: number | null}> {
     const chess = new Chess();
-    try { chess.loadPgn(pgn); } catch (e) { return Promise.resolve(0); }
+    try { chess.loadPgn(pgn); } catch (e) { return Promise.resolve({overall:0, opening:null, midgame:null, endgame:null}); }
 
     const isWhite = (chess.header() as any)["White"]?.toLowerCase() === playerUsername.toLowerCase();
     const fens = [new Chess().fen()]; 
@@ -150,15 +180,29 @@ export class App {
     this.activeWorkers.push(worker); 
 
     let currentFenIndex = 0, previousWhiteEval = 0, currentWhiteEval = 0; 
-    const moveAccuracies: number[] = [];
+    
+    // Arrays for different phases
+    const openAcc: number[] = [];
+    const midAcc: number[] = [];
+    const endAcc: number[] = [];
 
     return new Promise((resolve) => {
       let failsafeTimer: any;
+      
       const finish = () => {
         clearTimeout(failsafeTimer);
         worker.terminate();
         this.activeWorkers = this.activeWorkers.filter(w => w !== worker);
-        resolve(moveAccuracies.length ? Math.round(moveAccuracies.reduce((a, b) => a + b, 0) / moveAccuracies.length) : 0);
+        
+        const calcAvg = (arr: number[]) => arr.length ? Math.round(arr.reduce((a, b) => a + b, 0) / arr.length) : null;
+        const totalArr = [...openAcc, ...midAcc, ...endAcc];
+        
+        resolve({
+          overall: calcAvg(totalArr) || 0,
+          opening: calcAvg(openAcc),
+          midgame: calcAvg(midAcc),
+          endgame: calcAvg(endAcc)
+        });
       };
 
       const resetFailsafe = () => {
@@ -185,7 +229,13 @@ export class App {
             else if (!isWhite && !isBlackTurn) loss = currentWhiteEval - previousWhiteEval;
 
             if ((isWhite && isBlackTurn) || (!isWhite && !isBlackTurn)) {
-              moveAccuracies.push(100 * Math.exp(-Math.max(0, loss) / 200));
+              const accuracy = 100 * Math.exp(-Math.max(0, loss) / 200);
+              const moveNumber = Math.ceil(currentFenIndex / 2);
+              
+              // ⚡ Sort accuracy into the correct phase!
+              if (moveNumber <= 10) openAcc.push(accuracy);
+              else if (moveNumber <= 30) midAcc.push(accuracy);
+              else endAcc.push(accuracy);
             }
           }
           previousWhiteEval = currentWhiteEval;
@@ -277,12 +327,46 @@ export class App {
       data: {
         labels: labels,
         datasets: [{
-          label: 'Accuracy %', data: data, borderColor: '#2563eb', backgroundColor: 'rgba(37, 99, 235, 0.1)',
+          label: 'Overall Accuracy %', data: data, borderColor: '#2563eb', backgroundColor: 'rgba(37, 99, 235, 0.1)',
           borderWidth: 3, pointBackgroundColor: '#2563eb', pointRadius: 5, fill: true, tension: 0.4 
         }]
       },
-      options: { responsive: true, plugins: { legend: { display: false } }, scales: { y: { min: 0, max: 100 } } }
+      options: { 
+        responsive: true, 
+        maintainAspectRatio: false, // ⚡ FIX: Add this line!
+        plugins: { legend: { display: false } }, 
+        scales: { y: { min: 0, max: 100 } } 
+      }
     });
+  }
+
+  // ⚡ NEW: Draws the three mini phase charts!
+  drawPhaseCharts(labels: string[], open: (number|null)[], mid: (number|null)[], end: (number|null)[]) {
+    const createChart = (id: string, label: string, color: string, data: (number|null)[], chartRef: string) => {
+      const canvas = document.getElementById(id) as HTMLCanvasElement;
+      if (!canvas) return;
+      (this as any)[chartRef] = new Chart(canvas, {
+        type: 'line',
+        data: {
+          labels: labels,
+          datasets: [{
+            label: label, data: data, borderColor: color, backgroundColor: color + '1a',
+            borderWidth: 2, pointBackgroundColor: color, pointRadius: 3, fill: true, tension: 0.4, 
+            spanGaps: true // Connects lines even if a short game has no endgame!
+          }]
+        },
+        options: { 
+          responsive: true, 
+          maintainAspectRatio: false, 
+          plugins: { legend: { display: false }, title: { display: true, text: label, color: '#64748b', font: {size: 14} } }, 
+          scales: { y: { min: 0, max: 100, ticks: { display: false } }, x: { ticks: { display: false } } } 
+        }
+      });
+    };
+
+    createChart('openChart', 'Opening (Moves 1-10)', '#10b981', open, 'openChart'); // Green
+    createChart('midChart', 'Middlegame (Moves 11-30)', '#f59e0b', mid, 'midChart'); // Orange
+    createChart('endChart', 'Endgame (Moves 31+)', '#8b5cf6', end, 'endChart');     // Purple
   }
 
   // --- UI LOADERS ---
@@ -303,15 +387,12 @@ export class App {
   }
 
   // --- PLAYER CARD LOGIC ---
-  // --- PLAYER CARD LOGIC ---
   async fetchPlayerStats() {
     try {
-      // 1. Fetch their rating from your backend
       const statsRes = await fetch(`${environment.apiUrl}/stats/${this.selectedPlatform}/${this.username}`);
       const data = statsRes.ok ? await statsRes.json() : { rating: 1200 };
       this.cardData.rating = data.rating || 1200;
 
-      // 2. ⚡ Ask your backend to generate the AI Persona based on their rating and mood!
       const currentMood = this.selectedMood || 'straight';
       const identityRes = await fetch(`${environment.apiUrl}/identity/${this.username}/${this.cardData.rating}/${currentMood}`);
       
@@ -322,9 +403,7 @@ export class App {
       } else {
         throw new Error("AI Identity fetch failed");
       }
-
     } catch (e) { 
-      // Safe fallback if APIs fail
       this.cardData.rating = this.cardData.rating || 1200; 
       this.cardData.animal = '♟️';
       this.cardData.tagline = 'A mysterious tactician on the board.';
@@ -332,15 +411,6 @@ export class App {
   }
 
   downloadCard() {
-    const el = document.getElementById('player-card-export');
-    if (!el) return;
-    
-    // ⚡ NEW: Added useCORS: true so it knows it is allowed to draw the images!
-    html2canvas(el, { scale: 2, backgroundColor: null, useCORS: true }).then(c => {
-      const link = document.createElement('a');
-      link.download = `${this.analyzingUsername}-FixChess-Card.jpg`;
-      link.href = c.toDataURL('image/jpeg', 0.95);
-      link.click();
-    });
+    window.location.href = `${environment.apiUrl}/card/${this.selectedPlatform}/${this.analyzingUsername}`;
   }
 }

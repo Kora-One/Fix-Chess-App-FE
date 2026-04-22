@@ -90,7 +90,15 @@
         }
 
         <div class="chart-container" [class.hidden]="trendLoading || noGamesFound">
-          <canvas id="trendChart"></canvas>
+          <div class="main-chart-wrapper">
+            <canvas id="trendChart"></canvas>
+          </div>
+          
+          <div class="phase-charts-grid">
+            <div class="phase-chart-wrapper"><canvas id="openChart"></canvas></div>
+            <div class="phase-chart-wrapper"><canvas id="midChart"></canvas></div>
+            <div class="phase-chart-wrapper"><canvas id="endChart"></canvas></div>
+          </div>
         </div>
       </div>
 

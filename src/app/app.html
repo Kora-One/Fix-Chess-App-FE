@@ -229,6 +229,7 @@
               
               <div class="board-wrapper">
                 <chess-board #board 
+                             draggable-pieces
                              (drop)="onPuzzleMove($event)" 
                              style="width: 450px;">
                 </chess-board>

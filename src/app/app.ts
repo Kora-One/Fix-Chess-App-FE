@@ -310,18 +310,29 @@ export class App {
     });
   }
 
-  // --- PUZZLE LOGIC ---
+  // --- ⚡ PUZZLE LOGIC ---
   loadPuzzle(index: number) {
     this.currentPuzzleIndex = index;
     this.cdr.detectChanges(); 
     
+    // Clear previous highlights when loading a new puzzle
+    const styleTag = document.getElementById('puzzle-highlights');
+    if (styleTag) styleTag.innerHTML = '';
+
     setTimeout(() => {
       if (this.boardView) {
         const board = this.boardView.nativeElement;
-        board.setPosition(this.puzzles[index].fen);
+        const puzzle = this.puzzles[index];
         
-        // Auto-flip the board if it's Black's turn!
-        board.orientation = this.puzzles[index].fen.includes(' b ') ? 'black' : 'white';
+        // Hot-swap the data: If solved, load the winning state. Otherwise, load the starting position.
+        if (puzzle.status === 'solved' && puzzle.solvedFen) {
+          board.setPosition(puzzle.solvedFen);
+          this.highlightMove(puzzle.solvedSource, puzzle.solvedTarget);
+        } else {
+          board.setPosition(puzzle.fen);
+        }
+        
+        board.orientation = puzzle.fen.includes(' b ') ? 'black' : 'white';
       }
     }, 50);
   }
@@ -329,20 +340,56 @@ export class App {
   onPuzzleMove(event: any) {
     const puzzle = this.puzzles[this.currentPuzzleIndex];
     if (puzzle.status === 'solved') {
-      event.detail.setAction('snapback'); // Prevent moving pieces after solved
+      event.detail.setAction('snapback'); 
       return;
     }
 
     const source = event.detail.source; 
     const target = event.detail.target; 
+
+    if (source === target || target === 'offboard') return; 
+
     const userUci = source + target; 
 
     if (this.checkMoveMatch(userUci, puzzle.bestMove)) {
       puzzle.status = 'solved';
+      puzzle.solvedSource = source;
+      puzzle.solvedTarget = target;
+      
+      // ⚡ FIX: Mathematically predict and save the exact winning board state instantly.
+      // This severs the dependency on the DOM and eliminates the "bleeding tabs" race condition!
+      try {
+        const tempChess = new Chess(puzzle.fen);
+        tempChess.move({ from: source, to: target, promotion: 'q' });
+        puzzle.solvedFen = tempChess.fen();
+      } catch (e) {
+        // Safe fallback just in case of a weird FEN
+        puzzle.solvedFen = puzzle.fen;
+      }
+
+      this.highlightMove(source, target);
+
     } else {
       puzzle.status = 'failed';
-      event.detail.setAction('snapback'); // Snaps the piece back to its original square
+      event.detail.setAction('snapback'); 
     }
+  }
+
+  // ⚡ NEW: Paints the start and end squares yellow like Chess.com
+  highlightMove(source: string, target: string) {
+    let styleTag = document.getElementById('puzzle-highlights');
+    if (!styleTag) {
+      styleTag = document.createElement('style');
+      styleTag.id = 'puzzle-highlights';
+      document.head.appendChild(styleTag);
+    }
+    
+    // Uses Web Component ::part selectors to style the specific squares
+    styleTag.innerHTML = `
+      chess-board::part(${source}), chess-board::part(${target}) {
+        background-color: rgba(255, 255, 51, 0.6) !important;
+      }
+    `;
   }
 
   checkMoveMatch(userUci: string, stockfishUci: string): boolean {

@@ -8,6 +8,7 @@ import { Chess } from 'chess.js';
 import Chart from 'chart.js/auto';
 import { environment } from '../environments/environment';
 import 'chessboard-element'; // The modern, native Web Component board!
+import html2canvas from 'html2canvas';
 
 @Component({
   selector: 'app-root',
@@ -578,5 +579,33 @@ export class App {
     }
   }
 
-  downloadCard() { window.location.href = `${environment.apiUrl}/card/${this.selectedPlatform}/${this.analyzingUsername}`; }
+  // --- PLAYER CARD LOGIC ---
+  async downloadCard() {
+    const cardElement = document.getElementById('player-card-export');
+    
+    if (!cardElement) {
+      console.error('Could not find the player card element!');
+      return;
+    }
+
+    try {
+      // ⚡ Takes a high-quality screenshot of the hidden HTML element
+      const canvas = await html2canvas(cardElement, {
+        scale: 3, // Multiplies resolution for a crisp, HD image
+        backgroundColor: null, // Keeps the corners transparent if you have border-radius
+        useCORS: true // Ensures external images (like the Chess.com logo) don't break
+      });
+
+      // ⚡ Converts the screenshot to an image file and forces the download
+      const image = canvas.toDataURL('image/png');
+      const link = document.createElement('a');
+      link.href = image;
+      link.download = `${this.analyzingUsername}-FixChess-Card.png`;
+      link.click();
+      
+    } catch (error) {
+      console.error('Failed to generate player card:', error);
+      alert('Oops! Something went wrong while generating your card. Please try again.');
+    }
+  }
 }

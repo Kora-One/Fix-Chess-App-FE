@@ -22,6 +22,7 @@ export class App {
   // --- UI State ---
   username = '';
   analyzingUsername = '';
+  gameCount = 20; // ⚡ NEW: Default to 20 games
   report = '';
   selectedPlatform = '';
   showPlatformError = false;
@@ -95,6 +96,10 @@ export class App {
     if (!this.selectedPlatform) { this.showPlatformError = true; return; }
     if (!this.username) return;
     if (!this.selectedMood) { this.showMoodError = true; return; }
+
+    // ⚡ ENFORCE 1-30 LIMIT
+    if (this.gameCount < 1) this.gameCount = 1;
+    if (this.gameCount > 30) this.gameCount = 30;
     
     this.cancelCurrentAnalysis();
     this.analyzingUsername = this.username; 
@@ -103,12 +108,12 @@ export class App {
     this.activeTab = 'analysis'; 
     this.startFakeProgress();
     
-    const pgnsPromise = this.fetchMultipleGames(20);
+    const pgnsPromise = this.fetchMultipleGames(this.gameCount);
     this.generateTrendGraph(pgnsPromise);
     this.generateOpeningGraph(pgnsPromise);
     this.fetchPlayerStats();
 
-    const backendUrl = `${environment.apiUrl}/analyze/${this.selectedPlatform}/${this.username}/${this.selectedMood}`;
+    const backendUrl = `${environment.apiUrl}/analyze/${this.selectedPlatform}/${this.username}/${this.selectedMood}?limit=${this.gameCount}`;
     this.analysisSub = this.http.get(backendUrl, { responseType: 'text' }).subscribe({
       next: async (data) => {
         this.finishProgress();
@@ -529,7 +534,17 @@ export class App {
         options: { 
           responsive: true, maintainAspectRatio: false, 
           plugins: { legend: { display: false }, title: { display: true, text: label, color: '#64748b', font: {size: 14} } }, 
-          scales: { y: { min: 0, max: 100, ticks: { display: false } }, x: { ticks: { display: false } } } 
+          
+          /* ⚡ FIX: Removed the 'display: false' rules to restore numbering! */
+          scales: { 
+            y: { 
+              min: 0, 
+              max: 100 
+            }, 
+            x: { 
+              ticks: { maxTicksLimit: 6 } // Limits X-axis to ~6 labels so they don't overlap
+            } 
+          } 
         }
       });
     };

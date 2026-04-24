@@ -1,8 +1,7 @@
 <div class="app-layout">
-  
   <div class="sidebar">
     <h2>Chess Analyzer</h2>
-    
+
     <div class="platform-board">
       <button class="btn-plat chesscom" [class.active]="selectedPlatform === 'chesscom'" [disabled]="loading" (click)="selectPlatform('chesscom')">
         <span class="icon">♟️</span> Chess.com
@@ -11,12 +10,15 @@
         <span class="icon">🐴</span> Lichess
       </button>
     </div>
-    
+
     @if (showPlatformError) { <p class="error-text">⚠️ Please select a platform first!</p> }
 
-    <input type="text" [(ngModel)]="username" 
-           [placeholder]="selectedPlatform ? 'Enter Username' : 'Select platform first...'" 
-           [disabled]="!selectedPlatform" />
+    <input
+      type="text"
+      [(ngModel)]="username"
+      [placeholder]="selectedPlatform ? 'Enter Username' : 'Select platform first...'"
+      [disabled]="!selectedPlatform"
+    />
 
     <div class="mood-board">
       <button class="btn btn-roast" [class.active]="selectedMood === 'roast'" [disabled]="loading" (click)="selectMood('roast')">🔥 Roast</button>
@@ -24,7 +26,7 @@
       <button class="btn btn-sad" [class.active]="selectedMood === 'sad'" [disabled]="loading" (click)="selectMood('sad')">🎻 Drama</button>
       <button class="btn btn-straight" [class.active]="selectedMood === 'straight'" [disabled]="loading" (click)="selectMood('straight')">♟️ Straight</button>
     </div>
-    
+
     @if (showMoodError) { <p class="error-text">⚠️ Please choose a mood!</p> }
 
     <div class="settings-row">
@@ -32,9 +34,7 @@
       <input type="number" [(ngModel)]="gameCount" min="1" max="30" [disabled]="loading" class="game-count-input" />
     </div>
 
-    <button class="btn-analyze" 
-            [disabled]="(loading && username === analyzingUsername) || !username" 
-            (click)="getAnalysis()">
+    <button class="btn-analyze" [disabled]="(loading && username === analyzingUsername) || !username" (click)="getAnalysis()">
       {{ (loading && username === analyzingUsername) ? 'Analyzing...' : (loading ? 'Restart Analysis' : 'Analyze Game') }}
     </button>
   </div>
@@ -42,7 +42,6 @@
   <div class="main-content">
     @if (loading || report || trendLoading || trendProgress > 0 || openingLoading) {
       <div class="results-container">
-        
         <div class="tab-header">
           <button [class.active]="activeTab === 'analysis'" (click)="switchTab('analysis')">📝 AI Analysis</button>
           <button [class.active]="activeTab === 'trend'" (click)="switchTab('trend')">📊 {{ gameCount }}-Game Trend</button>
@@ -50,201 +49,202 @@
           <button [class.active]="activeTab === 'puzzles'" (click)="switchTab('puzzles')">🔥 Fix Blunders</button>
         </div>
 
-        <div class="tab-content" [class.hidden]="activeTab !== 'analysis'">
-          @if (loading) {
-            <div class="loader-container">
-              <p>Gemini is writing your report... {{ progressPercentage | number:'1.0-0' }}%</p>
-              <div class="progress-bar-bg"><div class="progress-bar-fill" [style.width.%]="progressPercentage"></div></div>
-            </div>
-          }
-          
-          @if (noGamesFound && !loading) {
-            <div class="markdown-output" style="text-align: center; padding-top: 20px;">
-              <h3 style="color: #dc2626;">⚠️ Username Not Found</h3>
-              <p>We could not pull data for <b>{{ analyzingUsername }}</b>. Please check the following:</p>
-              
-              <div style="display: inline-block; text-align: left; margin-top: 10px; background: #f8fafc; padding: 15px 30px; border-radius: 8px; border: 1px solid #e2e8f0;">
-                <ul style="color: #475569; margin: 0; padding-left: 20px;">
-                  <li><i>Verify the spelling of the username is perfectly accurate.</i></li>
-                  <li><i>Ensure you have the correct platform toggled at the top.</i></li>
-                  <li><i>Confirm this account has actually played standard chess games.</i></li>
-                </ul>
+        <div class="tab-panels">
+          <div class="tab-content" [class.hidden]="activeTab !== 'analysis'">
+            @if (loading) {
+              <div class="loader-container">
+                <p>Gemini is writing your report... {{ progressPercentage | number:'1.0-0' }}%</p>
+                <div class="progress-bar-bg"><div class="progress-bar-fill" [style.width.%]="progressPercentage"></div></div>
               </div>
-            </div>
-          }
-          
-          @if (report && !loading) { <div class="markdown-output" [innerHTML]="report"></div> }
-          
-          @if (report && !loading && !noGamesFound) { 
-            <div class="download-card-container">
-              <button class="btn-download" (click)="downloadCard()">
-                📸 Download Player Card (JPG)
-              </button>
-            </div>
-          }
-        </div>
-        
-        <div class="tab-content" [class.hidden]="activeTab !== 'trend'">
-          @if (trendLoading) {
-            <div class="loader-container stockfish-loader">
-              <p>Calculating {{ gameCount }}-game accuracy trend... {{ trendProgress }}%</p>
-              <div class="progress-bar-bg"><div class="progress-bar-fill stockfish-fill" [style.width.%]="trendProgress"></div></div>
-            </div>
-          }
-          
-          @if (noGamesFound && !trendLoading) {
-            <div class="markdown-output" style="text-align: center; padding-top: 20px;">
-              <h3 style="color: #dc2626;">⚠️ Username Not Found</h3>
-              <p>Could not fetch any games for <b>{{ analyzingUsername }}</b> on this platform.</p>
-            </div>
-          }
+            }
 
-          <div class="chart-container" [class.hidden]="trendLoading || noGamesFound">
-            <div class="main-chart-wrapper">
-              <canvas id="trendChart"></canvas>
-            </div>
-            
-            <div class="phase-charts-grid">
-              <div class="phase-chart-wrapper"><canvas id="openChart"></canvas></div>
-              <div class="phase-chart-wrapper"><canvas id="midChart"></canvas></div>
-              <div class="phase-chart-wrapper"><canvas id="endChart"></canvas></div>
+            @if (noGamesFound && !loading) {
+              <div class="status-card status-card-error">
+                <h3>⚠️ Username Not Found</h3>
+                <p>We could not pull data for <b>{{ analyzingUsername }}</b>. Please check the following:</p>
+
+                <div class="status-card-details">
+                  <ul>
+                    <li><i>Verify the spelling of the username is perfectly accurate.</i></li>
+                    <li><i>Ensure you have the correct platform toggled at the top.</i></li>
+                    <li><i>Confirm this account has actually played standard chess games.</i></li>
+                  </ul>
+                </div>
+              </div>
+            }
+
+            @if (report && !loading) { <div class="markdown-output" [innerHTML]="report"></div> }
+
+            @if (report && !loading && !noGamesFound) {
+              <div class="download-card-container">
+                <button class="btn-download" (click)="downloadCard()">📸 Download Player Card (JPG)</button>
+              </div>
+            }
+          </div>
+
+          <div class="tab-content" [class.hidden]="activeTab !== 'trend'">
+            @if (trendLoading) {
+              <div class="loader-container stockfish-loader">
+                <p>Calculating {{ gameCount }}-game accuracy trend... {{ trendProgress }}%</p>
+                <div class="progress-bar-bg"><div class="progress-bar-fill stockfish-fill" [style.width.%]="trendProgress"></div></div>
+              </div>
+            }
+
+            @if (noGamesFound && !trendLoading) {
+              <div class="status-card status-card-error">
+                <h3>⚠️ Username Not Found</h3>
+                <p>Could not fetch any games for <b>{{ analyzingUsername }}</b> on this platform.</p>
+              </div>
+            }
+
+            <div class="chart-container" [class.hidden]="trendLoading || noGamesFound">
+              <div class="main-chart-wrapper">
+                <canvas id="trendChart"></canvas>
+              </div>
+
+              <div class="phase-charts-grid">
+                <div class="phase-chart-wrapper"><canvas id="openChart"></canvas></div>
+                <div class="phase-chart-wrapper"><canvas id="midChart"></canvas></div>
+                <div class="phase-chart-wrapper"><canvas id="endChart"></canvas></div>
+              </div>
             </div>
           </div>
-        </div>
 
-        <div class="tab-content" [class.hidden]="activeTab !== 'openings'">
-          @if (openingLoading) {
-            <div class="loader-container">
-              <p>Analyzing opening repertoire...</p>
-            </div>
-          }
-          
-          @if (noGamesFound && !openingLoading) {
-            <div class="markdown-output" style="text-align: center; padding-top: 20px;">
-              <h3 style="color: #dc2626;">⚠️ Username Not Found</h3>
-              <p>Could not fetch any games for <b>{{ analyzingUsername }}</b> on this platform.</p>
-            </div>
-          }
-          
-          @if (!openingLoading && openingStats.length > 0) {
-            <div class="overall-summary">
-              <h3>Recent Form (Last {{ gameCount }} Games)</h3>
-              <div class="stacked-bar large-bar">
-                <div class="bar win" [style.width.%]="overallStats.winPct" [title]="overallStats.wins + ' Wins'"></div>
-                <div class="bar draw" [style.width.%]="overallStats.drawPct" [title]="overallStats.draws + ' Draws'"></div>
-                <div class="bar loss" [style.width.%]="overallStats.lossPct" [title]="overallStats.losses + ' Losses'"></div>
+          <div class="tab-content" [class.hidden]="activeTab !== 'openings'">
+            @if (openingLoading) {
+              <div class="loader-container">
+                <p>Analyzing opening repertoire...</p>
               </div>
-              <div class="bar-labels large-labels">
-                <span>{{ overallStats.wins }} Wins ({{ overallStats.winPct | number:'1.0-0' }}%)</span>
-                <span>{{ overallStats.draws }} Draws ({{ overallStats.drawPct | number:'1.0-0' }}%)</span>
-                <span>{{ overallStats.losses }} Losses ({{ overallStats.lossPct | number:'1.0-0' }}%)</span>
+            }
+
+            @if (noGamesFound && !openingLoading) {
+              <div class="status-card status-card-error">
+                <h3>⚠️ Username Not Found</h3>
+                <p>Could not fetch any games for <b>{{ analyzingUsername }}</b> on this platform.</p>
               </div>
-            </div>
-            <table class="opening-table">
-              <thead>
-                <tr>
-                  <th>Opening Played</th>
-                  <th>Win / Draw / Loss %</th>
-                </tr>
-              </thead>
-              <tbody>
-                @for (stat of openingStats; track stat.id) {
-                  <tr>
-                    <td>
-                      <div class="opening-name">{{ stat.name }}</div>
-                      <div class="opening-color" [class.white]="stat.color === 'White'" [class.black]="stat.color === 'Black'">
-                        As {{ stat.color }}
-                      </div>
-                    </td>
-                    <td class="bar-cell">
-                      <div class="stacked-bar">
-                        <div class="bar win" [style.width.%]="stat.winPct" [title]="stat.wins + ' Wins'"></div>
-                        <div class="bar draw" [style.width.%]="stat.drawPct" [title]="stat.draws + ' Draws'"></div>
-                        <div class="bar loss" [style.width.%]="stat.lossPct" [title]="stat.losses + ' Losses'"></div>
-                      </div>
-                      <div class="bar-labels">
-                        <span>{{ stat.wins }}W ({{ stat.winPct | number:'1.0-0' }}%)</span>
-                        <span>{{ stat.draws }}D</span>
-                        <span>{{ stat.losses }}L ({{ stat.lossPct | number:'1.0-0' }}%)</span>
-                      </div>
-                    </td>
-                  </tr>
-                }
-              </tbody>
-            </table>
-          }
-        </div>
-        
-        <div class="tab-content" [class.hidden]="activeTab !== 'puzzles'">
-          @if (trendLoading) {
-            <div class="loader-container stockfish-loader">
-              <p>Scanning games for catastrophic blunders... {{ trendProgress }}%</p>
-              <div class="progress-bar-bg"><div class="progress-bar-fill stockfish-fill" [style.width.%]="trendProgress"></div></div>
-            </div>
-          }
+            }
 
-          @if (!trendLoading && puzzles.length === 0) {
-            <div class="markdown-output" style="text-align: center; padding-top: 20px;">
-              <h3 style="color: #4caf50;">🏆 Incredible!</h3>
-              <p>We couldn't find any massive, game-losing blunders in your recent games. You are playing remarkably solid chess!</p>
-            </div>
-          }
-
-          @if (!trendLoading && puzzles.length > 0) {
-            <div class="puzzle-container">
-              <div class="puzzle-sidebar">
-                <h3>Your Worst Moves</h3>
-                <div class="puzzle-list">
-                  @for (p of puzzles; track p.gameNumber; let i = $index) {
-                    <button class="puzzle-item" 
-                            [class.active]="currentPuzzleIndex === i"
-                            [class.solved]="p.status === 'solved'"
-                            [class.failed]="p.status === 'failed'"
-                            (click)="loadPuzzle(i)">
-                      Game {{ p.gameNumber }}
-                      <span class="status-icon">{{ p.status === 'solved' ? '✅' : p.status === 'failed' ? '❌' : '♟️' }}</span>
-                    </button>
-                  }
+            @if (!openingLoading && openingStats.length > 0) {
+              <div class="overall-summary">
+                <h3>Recent Form (Last {{ gameCount }} Games)</h3>
+                <div class="stacked-bar large-bar">
+                  <div class="bar win" [style.width.%]="overallStats.winPct" [title]="overallStats.wins + ' Wins'"></div>
+                  <div class="bar draw" [style.width.%]="overallStats.drawPct" [title]="overallStats.draws + ' Draws'"></div>
+                  <div class="bar loss" [style.width.%]="overallStats.lossPct" [title]="overallStats.losses + ' Losses'"></div>
+                </div>
+                <div class="bar-labels large-labels">
+                  <span>{{ overallStats.wins }} Wins ({{ overallStats.winPct | number:'1.0-0' }}%)</span>
+                  <span>{{ overallStats.draws }} Draws ({{ overallStats.drawPct | number:'1.0-0' }}%)</span>
+                  <span>{{ overallStats.losses }} Losses ({{ overallStats.lossPct | number:'1.0-0' }}%)</span>
                 </div>
               </div>
 
-              <div class="puzzle-board-area">
-                <div class="puzzle-instruction">
-                  <h4>Game {{ puzzles[currentPuzzleIndex].gameNumber }} Analysis</h4>
-                  <p>You played <b style="color: #dc2626; font-size: 1.1em;">{{ puzzles[currentPuzzleIndex].playedMove }}</b> but there was a better option.</p>
-                  <p>Can you find it?</p>
-                  
-                  <div class="banner-placeholder">
-                    @if (puzzles[currentPuzzleIndex].status === 'solved') {
-                      <div class="success-banner">Brilliant! You found it! 🎉</div>
+              <div class="opening-table-wrap">
+                <table class="opening-table">
+                  <thead>
+                    <tr>
+                      <th>Opening Played</th>
+                      <th>Win / Draw / Loss %</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    @for (stat of openingStats; track stat.id) {
+                      <tr>
+                        <td>
+                          <div class="opening-name">{{ stat.name }}</div>
+                          <div class="opening-color" [class.white]="stat.color === 'White'" [class.black]="stat.color === 'Black'">
+                            As {{ stat.color }}
+                          </div>
+                        </td>
+                        <td class="bar-cell">
+                          <div class="stacked-bar">
+                            <div class="bar win" [style.width.%]="stat.winPct" [title]="stat.wins + ' Wins'"></div>
+                            <div class="bar draw" [style.width.%]="stat.drawPct" [title]="stat.draws + ' Draws'"></div>
+                            <div class="bar loss" [style.width.%]="stat.lossPct" [title]="stat.losses + ' Losses'"></div>
+                          </div>
+                          <div class="bar-labels">
+                            <span>{{ stat.wins }}W ({{ stat.winPct | number:'1.0-0' }}%)</span>
+                            <span>{{ stat.draws }}D</span>
+                            <span>{{ stat.losses }}L ({{ stat.lossPct | number:'1.0-0' }}%)</span>
+                          </div>
+                        </td>
+                      </tr>
                     }
-                    @if (puzzles[currentPuzzleIndex].status === 'failed') {
-                      <div class="error-banner">Not quite... try again!</div>
+                  </tbody>
+                </table>
+              </div>
+            }
+          </div>
+
+          <div class="tab-content" [class.hidden]="activeTab !== 'puzzles'">
+            @if (trendLoading) {
+              <div class="loader-container stockfish-loader">
+                <p>Scanning games for catastrophic blunders... {{ trendProgress }}%</p>
+                <div class="progress-bar-bg"><div class="progress-bar-fill stockfish-fill" [style.width.%]="trendProgress"></div></div>
+              </div>
+            }
+
+            @if (!trendLoading && puzzles.length === 0) {
+              <div class="status-card status-card-success">
+                <h3>🏆 Incredible!</h3>
+                <p>We couldn't find any massive, game-losing blunders in your recent games. You are playing remarkably solid chess!</p>
+              </div>
+            }
+
+            @if (!trendLoading && puzzles.length > 0) {
+              <div class="puzzle-container">
+                <div class="puzzle-sidebar">
+                  <h3>Your Worst Moves</h3>
+                  <div class="puzzle-list">
+                    @for (p of puzzles; track p.gameNumber; let i = $index) {
+                      <button
+                        class="puzzle-item"
+                        [class.active]="currentPuzzleIndex === i"
+                        [class.solved]="p.status === 'solved'"
+                        [class.failed]="p.status === 'failed'"
+                        (click)="loadPuzzle(i)"
+                      >
+                        Game {{ p.gameNumber }}
+                        <span class="status-icon">{{ p.status === 'solved' ? '✅' : p.status === 'failed' ? '❌' : '♟️' }}</span>
+                      </button>
                     }
                   </div>
                 </div>
-                
-                <div class="board-wrapper">
-                  <chess-board #board 
-                               draggable-pieces
-                               (drop)="onPuzzleMove($event)" 
-                               style="width: 450px;">
-                  </chess-board>
-                </div>
-                
-                <div style="display: flex; gap: 15px; margin-top: 15px;">
-                  <button class="btn-flip" (click)="flipBoard()">🔄 Flip Board</button>
-                  <button class="btn-hint" (click)="showHint()">💡 Show Hint</button>
+
+                <div class="puzzle-board-area">
+                  <div class="puzzle-instruction">
+                    <h4>Game {{ puzzles[currentPuzzleIndex].gameNumber }} Analysis</h4>
+                    <p>You played <b class="played-move">{{ puzzles[currentPuzzleIndex].playedMove }}</b> but there was a better option.</p>
+                    <p>Can you find it?</p>
+
+                    <div class="banner-placeholder">
+                      @if (puzzles[currentPuzzleIndex].status === 'solved') {
+                        <div class="success-banner">Brilliant! You found it! 🎉</div>
+                      }
+                      @if (puzzles[currentPuzzleIndex].status === 'failed') {
+                        <div class="error-banner">Not quite... try again!</div>
+                      }
+                    </div>
+                  </div>
+
+                  <div class="board-wrapper">
+                    <chess-board #board draggable-pieces (drop)="onPuzzleMove($event)" class="puzzle-board"></chess-board>
+                  </div>
+
+                  <div class="puzzle-actions">
+                    <button class="btn-flip" (click)="flipBoard()">🔄 Flip Board</button>
+                    <button class="btn-hint" (click)="showHint()">💡 Show Hint</button>
+                  </div>
                 </div>
               </div>
-            </div>
-          }
+            }
+          </div>
         </div>
       </div>
     } @else {
       <div class="empty-state">
-         <h3>Ready to Analyze!</h3>
-         <p>Select a platform, enter a username, and pick a mood to generate your personalized AI chess report.</p>
+        <h3>Ready to Analyze!</h3>
+        <p>Select a platform, enter a username, and pick a mood to generate your personalized AI chess report.</p>
       </div>
     }
   </div>
@@ -252,7 +252,7 @@
 
 <div class="export-wrapper">
   <div id="player-card-export" class="player-card">
-    <img class="card-logo" [src]="selectedPlatform === 'chesscom' ? 'chesscom.png' : 'lichess.png'" alt="Platform Logo">
+    <img class="card-logo" [src]="selectedPlatform === 'chesscom' ? 'chesscom.png' : 'lichess.png'" alt="Platform Logo" />
     <div class="card-title">{{ analyzingUsername }}</div>
     <div class="card-animal">{{ cardData.animal }}</div>
     <div class="card-rating-title">Peak Rating</div>

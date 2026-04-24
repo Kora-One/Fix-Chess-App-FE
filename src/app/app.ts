@@ -2,13 +2,25 @@ import { Component, ChangeDetectorRef, ViewChild, ElementRef, CUSTOM_ELEMENTS_SC
 import { DecimalPipe } from '@angular/common'; 
 import { FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
-import { Subscription } from 'rxjs'; 
+import { firstValueFrom, from, Subscription } from 'rxjs'; 
 import { marked } from 'marked'; 
 import { Chess } from 'chess.js';
 import Chart from 'chart.js/auto';
 import { environment } from '../environments/environment';
 import 'chessboard-element'; // The modern, native Web Component board!
 import html2canvas from 'html2canvas';
+
+type MockIdentity = {
+  animal: string;
+  tagline: string;
+};
+
+type MockApiData = {
+  analyze: Record<string, Record<string, Record<string, string>>>;
+  games: Record<string, Record<string, string[]>>;
+  identity: Record<string, Record<string, MockIdentity>>;
+  stats: Record<string, Record<string, { rating: number }>>;
+};
 
 @Component({
   selector: 'app-root',
@@ -60,6 +72,7 @@ export class App {
   private currentAnalysisId = 0; 
   private activeWorkers: Worker[] = [];
   private analysisSub?: Subscription;
+  private mockDataPromise?: Promise<MockApiData>;
 
   constructor(private http: HttpClient, private cdr: ChangeDetectorRef) {}
 
@@ -113,8 +126,9 @@ export class App {
     this.generateOpeningGraph(pgnsPromise);
     this.fetchPlayerStats();
 
-    const backendUrl = `${environment.apiUrl}/analyze/${this.selectedPlatform}/${this.username}/${this.selectedMood}?limit=${this.gameCount}`;
-    this.analysisSub = this.http.get(backendUrl, { responseType: 'text' }).subscribe({
+    this.analysisSub = from(
+      this.getAnalysisReport(this.selectedPlatform, this.username, this.selectedMood, this.gameCount)
+    ).subscribe({
       next: async (data) => {
         this.finishProgress();
         
@@ -493,11 +507,7 @@ export class App {
 
   // --- API HELPER ---
   async fetchMultipleGames(limit: number): Promise<string[]> {
-    try {
-      const res = await fetch(`${environment.apiUrl}/games/${this.selectedPlatform}/${this.username}?limit=${limit}`);
-      if (!res.ok) return [];
-      return await res.json();
-    } catch (e) { return []; }
+    return this.getGames(this.selectedPlatform, this.username, limit);
   }
 
   // --- CHARTS ---
@@ -573,25 +583,102 @@ export class App {
   // --- PLAYER CARD LOGIC ---
   async fetchPlayerStats() {
     try {
-      const statsRes = await fetch(`${environment.apiUrl}/stats/${this.selectedPlatform}/${this.username}`);
-      const data = statsRes.ok ? await statsRes.json() : { rating: 1200 };
+      const data = await this.getStats(this.selectedPlatform, this.username);
       this.cardData.rating = data.rating || 1200;
 
       const currentMood = this.selectedMood || 'straight';
-      const identityRes = await fetch(`${environment.apiUrl}/identity/${this.username}/${this.cardData.rating}/${currentMood}`);
-      
-      if (identityRes.ok) {
-        const idData = await identityRes.json();
-        this.cardData.animal = idData.animal;
-        this.cardData.tagline = idData.tagline;
-      } else {
-        throw new Error("AI Identity fetch failed");
-      }
+      const idData = await this.getIdentity(this.username, this.cardData.rating, currentMood);
+      this.cardData.animal = idData.animal;
+      this.cardData.tagline = idData.tagline;
     } catch (e) { 
       this.cardData.rating = this.cardData.rating || 1200; 
       this.cardData.animal = '♟️';
       this.cardData.tagline = 'A mysterious tactician on the board.';
     }
+  }
+
+  private normalizeKey(value: string): string {
+    return value.trim().toLowerCase();
+  }
+
+  private getMockData(): Promise<MockApiData> {
+    if (!this.mockDataPromise) {
+      this.mockDataPromise = fetch('/mock-api.json').then(async (res) => {
+        if (!res.ok) {
+          throw new Error('Failed to load mock API data');
+        }
+
+        return res.json() as Promise<MockApiData>;
+      });
+    }
+
+    return this.mockDataPromise;
+  }
+
+  private async getGames(platform: string, username: string, limit: number): Promise<string[]> {
+    if (!environment.mock) {
+      try {
+        const res = await fetch(`${environment.apiUrl}/games/${platform}/${username}?limit=${limit}`);
+        if (!res.ok) return [];
+        return await res.json();
+      } catch (e) {
+        return [];
+      }
+    }
+
+    const mockData = await this.getMockData();
+    const games = mockData.games[this.normalizeKey(platform)]?.[this.normalizeKey(username)] || [];
+    return games.slice(0, Math.min(limit, games.length));
+  }
+
+  private async getStats(platform: string, username: string): Promise<{ rating: number }> {
+    if (!environment.mock) {
+      const statsRes = await fetch(`${environment.apiUrl}/stats/${platform}/${username}`);
+      return statsRes.ok ? await statsRes.json() : { rating: 1200 };
+    }
+
+    const mockData = await this.getMockData();
+    return mockData.stats[this.normalizeKey(platform)]?.[this.normalizeKey(username)] || { rating: 1200 };
+  }
+
+  private async getIdentity(username: string, rating: number, mood: string): Promise<MockIdentity> {
+    if (!environment.mock) {
+      const identityRes = await fetch(`${environment.apiUrl}/identity/${username}/${rating}/${mood}`);
+      if (!identityRes.ok) {
+        throw new Error('AI Identity fetch failed');
+      }
+
+      return identityRes.json();
+    }
+
+    const mockData = await this.getMockData();
+    const usernameKey = this.normalizeKey(username);
+    const moodKey = this.normalizeKey(mood);
+    const ratingKey = String(rating);
+
+    return (
+      mockData.identity[usernameKey]?.[`${ratingKey}:${moodKey}`] || {
+        animal: 'â™Ÿï¸',
+        tagline: 'A mysterious tactician on the board.'
+      }
+    );
+  }
+
+  private async getAnalysisReport(platform: string, username: string, mood: string, limit: number): Promise<string> {
+    if (!environment.mock) {
+      const backendUrl = `${environment.apiUrl}/analyze/${platform}/${username}/${mood}?limit=${limit}`;
+      return firstValueFrom(this.http.get(backendUrl, { responseType: 'text' }));
+    }
+
+    const mockData = await this.getMockData();
+    const platformKey = this.normalizeKey(platform);
+    const usernameKey = this.normalizeKey(username);
+    const moodKey = this.normalizeKey(mood);
+
+    return (
+      mockData.analyze[platformKey]?.[usernameKey]?.[moodKey] ||
+      'Error: Mock analysis not found for this platform, username, and mood.'
+    );
   }
 
   // --- PLAYER CARD LOGIC ---

@@ -54,7 +54,7 @@
           <div class="tab-content" [class.hidden]="activeTab !== 'analysis'">
             @if (loading) {
               <div class="loader-container">
-                <p>Gemini is writing your report... {{ progressPercentage | number:'1.0-0' }}%</p>
+                <p>Writing your report... {{ progressPercentage | number:'1.0-0' }}%</p>
                 <div class="progress-bar-bg"><div class="progress-bar-fill" [style.width.%]="progressPercentage"></div></div>
               </div>
             }
@@ -244,8 +244,11 @@
           <div class="tab-content" [class.hidden]="activeTab !== 'psychology'">
             @if (pressureLoading) {
               <div class="loader-container stockfish-loader">
-                <p>Gemini is mapping your psychological pressure points...</p>
-                <div class="progress-bar-bg"><div class="progress-bar-fill stockfish-fill" style="width: 100%; animation: pulse 1.5s infinite"></div></div>
+                <p>Mapping your psychological pressure points... {{ pressureProgress | number:'1.0-0' }}%</p>
+                
+                <div class="progress-bar-bg">
+                  <div class="progress-bar-fill stockfish-fill" [style.width.%]="pressureProgress"></div>
+                </div>
               </div>
             }
 
@@ -264,7 +267,7 @@
                 
                 <div class="ai-insight-box">
                   <h3>AI Profile: {{ pressureData.persona }}</h3>
-                  <p><b>Gemini Insight:</b> "{{ pressureData.aiInsight }}"</p>
+                  <p><b>Insight:</b> "{{ pressureData.aiInsight }}"</p>
                 </div>
               </div>
             }

@@ -43,6 +43,11 @@ export class App {
   activeTab = 'analysis';
   noGamesFound = false;
 
+  // --- Pressure Profile State ---
+  pressureChart: any;
+  pressureLoading = false;
+  pressureData: any = null;
+
   // --- Loading & Graph State ---
   loading = false;
   progressPercentage = 0;
@@ -89,7 +94,9 @@ export class App {
         if (this.midChart) this.midChart.resize();
         if (this.endChart) this.endChart.resize();
       } else if (tab === 'puzzles' && this.puzzles.length > 0) {
-        this.loadPuzzle(this.currentPuzzleIndex); // Load the board when tab is clicked
+        this.loadPuzzle(this.currentPuzzleIndex); 
+      } else if (tab === 'psychology') {
+        if (this.pressureChart) this.pressureChart.resize();
       }
     }, 50);
   }
@@ -125,6 +132,7 @@ export class App {
     this.generateTrendGraph(pgnsPromise);
     this.generateOpeningGraph(pgnsPromise);
     this.fetchPlayerStats();
+    this.fetchPressureProfile();
 
     this.analysisSub = from(
       this.getAnalysisReport(this.selectedPlatform, this.username, this.selectedMood, this.gameCount)
@@ -578,6 +586,77 @@ export class App {
     clearInterval(this.progressInterval); 
     this.progressPercentage = 100; 
     setTimeout(() => { this.loading = false; this.cdr.detectChanges(); }, 600); 
+  }
+
+// --- PSYCHOLOGICAL PROFILE (RADAR CHART) ---
+  async fetchPressureProfile() {
+    this.pressureLoading = true;
+    this.pressureData = null;
+    if (this.pressureChart) this.pressureChart.destroy();
+
+    try {
+      const url = `${environment.apiUrl}/pressure?platform=${this.selectedPlatform}&username=${this.username}&limit=${this.gameCount}`;
+      this.pressureData = await firstValueFrom(this.http.get(url));
+      
+      if (!this.pressureData.error) {
+        // Give the DOM a millisecond to render the canvas before drawing
+        setTimeout(() => this.drawPressureChart(), 50);
+      }
+    } catch (e) {
+      console.error("Failed to fetch pressure profile", e);
+    } finally {
+      this.pressureLoading = false;
+      this.cdr.detectChanges();
+    }
+  }
+
+  drawPressureChart() {
+    const canvas = document.getElementById('pressureChart') as HTMLCanvasElement;
+    if (!canvas || !this.pressureData) return;
+
+    this.pressureChart = new Chart(canvas, {
+      type: 'radar',
+      data: {
+        labels: this.pressureData.attributes,
+        datasets: [
+          {
+            label: 'Normal Mode (>60s)',
+            data: this.pressureData.normalData,
+            backgroundColor: 'rgba(59, 130, 246, 0.4)', // Blue
+            borderColor: '#3b82f6',
+            pointBackgroundColor: '#3b82f6',
+            borderWidth: 2,
+            fill: true
+          },
+          {
+            label: 'Under Pressure (<30s)',
+            data: this.pressureData.pressureData,
+            backgroundColor: 'rgba(239, 68, 68, 0.5)', // Red
+            borderColor: '#ef4444',
+            pointBackgroundColor: '#ef4444',
+            borderWidth: 2,
+            fill: true
+          }
+        ]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: {
+          r: {
+            min: 0,   // ⚡ Moved out of ticks
+            max: 100, // ⚡ Moved out of ticks
+            angleLines: { color: 'rgba(0, 0, 0, 0.1)' },
+            grid: { color: 'rgba(0, 0, 0, 0.1)' },
+            pointLabels: { color: '#334155', font: { size: 13, weight: 'bold' } },
+            ticks: { stepSize: 25, display: false } // Only stepSize and display stay here
+          }
+        },
+        plugins: {
+          legend: { position: 'top', labels: { usePointStyle: true, font: { weight: 'bold' } } }
+        }
+      }
+    });
   }
 
   // --- PLAYER CARD LOGIC ---

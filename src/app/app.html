@@ -47,6 +47,7 @@
           <button [class.active]="activeTab === 'trend'" (click)="switchTab('trend')">📊 {{ gameCount }}-Game Trend</button>
           <button [class.active]="activeTab === 'openings'" (click)="switchTab('openings')">🎯 Openings</button>
           <button [class.active]="activeTab === 'puzzles'" (click)="switchTab('puzzles')">🔥 Fix Blunders</button>
+          <button [class.active]="activeTab === 'psychology'" (click)="switchTab('psychology')">🧠 Psychology</button>
         </div>
 
         <div class="tab-panels">
@@ -235,6 +236,35 @@
                     <button class="btn-flip" (click)="flipBoard()">🔄 Flip Board</button>
                     <button class="btn-hint" (click)="showHint()">💡 Show Hint</button>
                   </div>
+                </div>
+              </div>
+            }
+          </div>
+
+          <div class="tab-content" [class.hidden]="activeTab !== 'psychology'">
+            @if (pressureLoading) {
+              <div class="loader-container stockfish-loader">
+                <p>Gemini is mapping your psychological pressure points...</p>
+                <div class="progress-bar-bg"><div class="progress-bar-fill stockfish-fill" style="width: 100%; animation: pulse 1.5s infinite"></div></div>
+              </div>
+            }
+
+            @if (pressureData?.error && !pressureLoading) {
+              <div class="status-card status-card-error">
+                <h3>⚠️ Data Incomplete</h3>
+                <p>We couldn't generate a pressure profile. Try playing more games!</p>
+              </div>
+            }
+
+            @if (!pressureLoading && !pressureData?.error && pressureData) {
+              <div class="psychology-container">
+                <div class="chart-container radar-wrapper">
+                  <canvas id="pressureChart"></canvas>
+                </div>
+                
+                <div class="ai-insight-box">
+                  <h3>AI Profile: {{ pressureData.persona }}</h3>
+                  <p><b>Gemini Insight:</b> "{{ pressureData.aiInsight }}"</p>
                 </div>
               </div>
             }

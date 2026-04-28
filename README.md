@@ -1,59 +1,25 @@
-# ChessFrontend
+# 🎨 FixChess Frontend (UI)
 
-This project was generated using [Angular CLI](https://github.com/angular/angular-cli) version 21.2.2.
+> **The visual interface for the [FixChess AI Analyzer](https://github.com/ajaysatpati/fixchess-root), a core module of the KORA ONE ecosystem.**
 
-## Development server
+FixChess UI is a high-performance, responsive Angular 21 application designed to visualize complex chess data. It translates raw backend analysis into engaging player identities, interactive boards, and real-time AI roasts.
 
-To start a local development server, run:
+---
 
-```bash
-ng serve
-```
+## ✨ Key Features
 
-Once the server is running, open your browser and navigate to `http://localhost:4200/`. The application will automatically reload whenever you modify any of the source files.
+* **Native Board Visualization:** Built with high-performance Web Components for smooth, lag-free piece movement and game playback without heavy external libraries.
+* **Dynamic Player Identity Cards:** Visualizes "Chess Personas" using interactive metrics for Aggression, Defense, and Precision.
+* **Real-time AI Streaming:** Handles asynchronous data delivery from Gemini 1.5 Flash with dedicated "Thinking..." states for a seamless user experience.
+* **Responsive Dashboard:** Fully optimized for Mobile, Tablet, and Desktop viewing using CSS Grid and Flexbox.
+* **Error Resilience:** Visual feedback indicators for when the system is in fallback mode or bypassing the Redis cache.
 
-## Code scaffolding
+---
 
-Angular CLI includes powerful code scaffolding tools. To generate a new component, run:
+## 🛠️ Technical Stack
 
-```bash
-ng generate component component-name
-```
+* **Framework:** Angular 21
+* **Styling:** CSS
+* **Components:** Custom Web Components for Chessboard rendering
 
-For a complete list of available schematics (such as `components`, `directives`, or `pipes`), run:
-
-```bash
-ng generate --help
-```
-
-## Building
-
-To build the project run:
-
-```bash
-ng build
-```
-
-This will compile your project and store the build artifacts in the `dist/` directory. By default, the production build optimizes your application for performance and speed.
-
-## Running unit tests
-
-To execute unit tests with the [Vitest](https://vitest.dev/) test runner, use the following command:
-
-```bash
-ng test
-```
-
-## Running end-to-end tests
-
-For end-to-end (e2e) testing, run:
-
-```bash
-ng e2e
-```
-
-Angular CLI does not come with an end-to-end testing framework by default. You can choose one that suits your needs.
-
-## Additional Resources
-
-For more information on using the Angular CLI, including detailed command references, visit the [Angular CLI Overview and Command Reference](https://angular.dev/tools/cli) page.
+---

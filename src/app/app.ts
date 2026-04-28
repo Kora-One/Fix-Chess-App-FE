@@ -1,5 +1,5 @@
 import { Component, ChangeDetectorRef, ViewChild, ElementRef, CUSTOM_ELEMENTS_SCHEMA } from '@angular/core';
-import { DecimalPipe } from '@angular/common'; 
+import { DecimalPipe, JsonPipe } from '@angular/common'; 
 import { FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
 import { firstValueFrom, from, Subscription } from 'rxjs'; 
@@ -25,7 +25,7 @@ type MockApiData = {
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [DecimalPipe, FormsModule], 
+  imports: [DecimalPipe, FormsModule, JsonPipe], 
   schemas: [CUSTOM_ELEMENTS_SCHEMA], // Tells Angular to allow native <chess-board> HTML tags
   templateUrl: './app.html',
   styleUrls: ['./app.css']
@@ -43,10 +43,17 @@ export class App {
   activeTab = 'analysis';
   noGamesFound = false;
 
+  // --- Pressure Profile State ---
+  pressureChart: any;
+  pressureLoading = false;
+  pressureData: any = null;
+
   // --- Loading & Graph State ---
   loading = false;
   progressPercentage = 0;
   private progressInterval: any;
+  pressureProgress = 0;         // ⚡ NEW
+  private pressureInterval: any; // ⚡ NEW
   
   trendChart: any;
   openChart: any;
@@ -89,7 +96,11 @@ export class App {
         if (this.midChart) this.midChart.resize();
         if (this.endChart) this.endChart.resize();
       } else if (tab === 'puzzles' && this.puzzles.length > 0) {
-        this.loadPuzzle(this.currentPuzzleIndex); // Load the board when tab is clicked
+        this.loadPuzzle(this.currentPuzzleIndex); 
+      } else if (tab === 'psychology') {
+        if (this.pressureData && !this.pressureData.error) {
+          this.drawPressureChart(); 
+        }
       }
     }, 50);
   }
@@ -125,6 +136,7 @@ export class App {
     this.generateTrendGraph(pgnsPromise);
     this.generateOpeningGraph(pgnsPromise);
     this.fetchPlayerStats();
+    this.fetchPressureProfile();
 
     this.analysisSub = from(
       this.getAnalysisReport(this.selectedPlatform, this.username, this.selectedMood, this.gameCount)
@@ -523,7 +535,22 @@ export class App {
           borderWidth: 3, pointBackgroundColor: '#2563eb', pointRadius: 5, fill: true, tension: 0.4 
         }]
       },
-      options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { min: 0, max: 100 } } }
+      options: { 
+        responsive: true, 
+        maintainAspectRatio: false, 
+        plugins: { 
+          legend: { display: false },
+          // ⚡ NEW: The Main Trend Title
+          title: {
+            display: true,
+            text: `Overall Accuracy Trend (Last ${this.gameCount} Games)`,
+            color: '#334155',
+            font: { size: 16, weight: 'bold' },
+            padding: { bottom: 20 } // Adds some breathing room below the title
+          }
+        }, 
+        scales: { y: { min: 0, max: 100 } } 
+      }
     });
   }
 
@@ -578,6 +605,137 @@ export class App {
     clearInterval(this.progressInterval); 
     this.progressPercentage = 100; 
     setTimeout(() => { this.loading = false; this.cdr.detectChanges(); }, 600); 
+  }
+
+  // --- PSYCHOLOGICAL PROFILE (RADAR CHART) ---
+  async fetchPressureProfile() {
+    this.pressureLoading = true;
+    this.pressureData = null;
+    this.pressureProgress = 0;
+    if (this.pressureChart) this.pressureChart.destroy();
+
+    // ⚡ NEW: Start the fake progress loader
+    this.pressureInterval = setInterval(() => {
+      if (this.pressureProgress < 95) {
+        this.pressureProgress = Math.min(this.pressureProgress + (Math.random() * 3), 95);
+        this.cdr.detectChanges();
+      }
+    }, 250);
+
+    try {
+      const url = `${environment.apiUrl}/pressure/${this.selectedPlatform}/${this.username}?limit=${this.gameCount}`;
+      this.pressureData = await firstValueFrom(this.http.get(url));
+
+      if (!this.pressureData.error) {
+        // ⚡ NEW: Stop the timer and snap to 100%
+        clearInterval(this.pressureInterval);
+        this.pressureProgress = 100;
+        this.cdr.detectChanges();
+        
+        // Wait 400ms to let the user see it hit 100% before drawing the chart
+        setTimeout(() => {
+          this.pressureLoading = false; 
+          this.cdr.detectChanges(); 
+          if (this.activeTab === 'psychology') {
+            this.drawPressureChart();
+          }
+        }, 400);
+        return; // Exit early so we don't hit the `finally` block instantly
+      }
+    } catch (e) {
+      console.error("Failed to fetch pressure profile", e);
+    } 
+    
+    // Fallback if there's an error
+    clearInterval(this.pressureInterval);
+    this.pressureProgress = 100;
+    this.cdr.detectChanges();
+    setTimeout(() => {
+      this.pressureLoading = false;
+      this.cdr.detectChanges();
+    }, 400);
+  }
+
+  drawPressureChart() {
+    console.log("🟨 [DEBUG] drawPressureChart called. Looking for canvas...");
+    const canvas = document.getElementById('pressureChart') as HTMLCanvasElement;
+    
+    if (!canvas) {
+      console.error("🟥 [DEBUG] FAIL: <canvas id='pressureChart'> is NOT in the DOM!");
+      return;
+    }
+    
+    if (!this.pressureData) {
+      console.error("🟥 [DEBUG] FAIL: this.pressureData is null or empty!");
+      return;
+    }
+
+    console.log("🟩 [DEBUG] Canvas found! Drawing Chart...");
+    this.pressureChart = new Chart(canvas, {
+      type: 'radar',
+      data: {
+        labels: this.pressureData.attributes,
+        datasets: [
+          {
+            label: 'Normal Mode (>60s)',
+            data: this.pressureData.normalData,
+            backgroundColor: 'rgba(59, 130, 246, 0.4)', // Blue
+            borderColor: '#3b82f6',
+            pointBackgroundColor: '#3b82f6',
+            borderWidth: 2,
+            fill: true
+          },
+          {
+            label: 'Under Pressure (<30s)',
+            data: this.pressureData.pressureData,
+            backgroundColor: 'rgba(239, 68, 68, 0.5)', // Red
+            borderColor: '#ef4444',
+            pointBackgroundColor: '#ef4444',
+            borderWidth: 2,
+            fill: true
+          }
+        ]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        // ⚡ NEW: The Animation Config!
+        animation: {
+          duration: 1500,               // 1.5 seconds for a smooth, visible growth
+          easing: 'easeOutQuart',     // Gives it a satisfying "spring" or bounce from the center
+          delay: 200                    // Small delay so the user sees it start after the tab switches
+        },
+        scales: {
+          r: {
+            min: 0,   // ⚡ Moved out of ticks
+            max: 100, // ⚡ Moved out of ticks
+            angleLines: { color: 'rgba(0, 0, 0, 0.1)' },
+            grid: { color: 'rgba(0, 0, 0, 0.1)' },
+            pointLabels: { color: '#334155', font: { size: 15, weight: 'bold' } },
+            ticks: { stepSize: 25, display: false } // Only stepSize and display stay here
+          }
+        },
+        plugins: {
+          // ⚡ NEW: The Radar Chart Title
+          title: {
+            display: true,
+            text: 'Performance Under Pressure',
+            color: '#000000', // A nice dark green to match the AI Insight box!
+            font: { size: 20, weight: 'bolder' },
+            padding: { bottom: 25 }
+          },
+          legend: { 
+            position: 'bottom',   // ⚡ Places it on the right-hand side of the chart
+            align: 'center',        // ⚡ Pushes it towards the bottom-right corner
+            labels: { 
+              usePointStyle: true, 
+              font: { weight: 'bold' },
+              padding: 20
+            } 
+          }
+        }
+      }
+    });
   }
 
   // --- PLAYER CARD LOGIC ---

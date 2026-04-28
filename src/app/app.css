@@ -840,6 +840,65 @@ button:disabled {
   }
 }
 
+/* --- PSYCHOLOGY TAB --- */
+.radar-wrapper {
+  position: relative;
+  height: 550px;
+  width: 100%;
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+.psychology-container {
+  display: flex;
+  flex-direction: column;
+  min-height: calc(100vh - 220px);
+  
+  position: relative; /* 🔥 IMPORTANT */
+  padding-bottom: 100px; /* space so content doesn't overlap */
+}
+
+.ai-insight-box {
+  background: linear-gradient(135deg, #f0fdf4, #dcfce7);
+  border: 1px solid #bbf7d0;
+  border-radius: 12px;
+  padding: 20px;
+  color: #166534;
+
+  position: absolute;   /* 🔥 Key change */
+  bottom: 20px;
+  left: 0;
+  right: 0;
+
+  z-index: 10;
+  box-shadow: 0 -15px 25px rgba(255, 255, 255, 0.9),
+              0 8px 20px rgba(22, 101, 52, 0.15);
+}
+
+.ai-insight-box h3 {
+  margin-top: 0;
+  color: #15803d;
+  font-size: 1.3em;
+  border-bottom: 2px solid #bbf7d0;
+  padding-bottom: 10px;
+}
+
+.ai-insight-box p {
+  font-size: 1.1em;
+  line-height: 1.6;
+  margin-bottom: 0;
+}
+
+@keyframes pulse {
+  0% { opacity: 0.6; }
+  50% { opacity: 1; }
+  100% { opacity: 0.6; }
+}
+
+@media (max-width: 700px) {
+  .radar-wrapper { height: 350px; }
+}
+
 @media (max-width: 1000px) {
   .app-layout {
     flex-direction: column;

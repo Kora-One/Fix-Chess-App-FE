@@ -1,5 +1,5 @@
 import { Component, ChangeDetectorRef, ViewChild, ElementRef, CUSTOM_ELEMENTS_SCHEMA } from '@angular/core';
-import { DecimalPipe, JsonPipe } from '@angular/common'; 
+import { DecimalPipe, JsonPipe, NgClass } from '@angular/common'; 
 import { FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
 import { firstValueFrom, from, Subscription } from 'rxjs'; 
@@ -25,7 +25,7 @@ type MockApiData = {
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [DecimalPipe, FormsModule, JsonPipe], 
+  imports: [DecimalPipe, FormsModule, JsonPipe, NgClass], 
   schemas: [CUSTOM_ELEMENTS_SCHEMA], // Tells Angular to allow native <chess-board> HTML tags
   templateUrl: './app.html',
   styleUrls: ['./app.css']
@@ -42,6 +42,12 @@ export class App {
   showMoodError = false;
   activeTab = 'analysis';
   noGamesFound = false;
+
+  // --- Heatmap Variables ---
+  files = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'];
+  ranks = [8, 7, 6, 5, 4, 3, 2, 1]; // Reversed so 8 is at top
+  blunderData: { [square: string]: number } = {};
+  maxBlunders = 0;
 
   // --- Pressure Profile State ---
   pressureChart: any;
@@ -199,6 +205,9 @@ export class App {
     const accEnd: (number | null)[] = [];
     const gameLabels: string[] = [];
 
+    this.blunderData = {};
+    this.maxBlunders = 0;
+
     for (let i = 0; i < pgns.length; i++) {
       if (this.currentAnalysisId !== thisAnalysis) return; 
       
@@ -210,12 +219,22 @@ export class App {
       accEnd.push(result.endgame);
       gameLabels.push(`Game ${i + 1}`);
 
-      // Extract the worst blunder from this game for the puzzle tab
+      // Extract the worst blunder for the puzzle tab
       if (result.blunder) {
         this.puzzles.push({
           ...result.blunder,
           gameNumber: i + 1,
           status: 'pending' 
+        });
+      }
+
+      // ⚡ NEW: Add all blunder squares from this game to the Heatmap!
+      if (result.blunderSquares && result.blunderSquares.length > 0) {
+        result.blunderSquares.forEach(sq => {
+          this.blunderData[sq] = (this.blunderData[sq] || 0) + 1;
+          if (this.blunderData[sq] > this.maxBlunders) {
+            this.maxBlunders = this.blunderData[sq];
+          }
         });
       }
       
@@ -238,12 +257,15 @@ export class App {
     }, 50);
   }
 
-  calculateSingleGameAccuracy(pgn: string, playerUsername: string): Promise<{overall: number, opening: number | null, midgame: number | null, endgame: number | null, blunder: any}> {
+  calculateSingleGameAccuracy(pgn: string, playerUsername: string): Promise<{overall: number, opening: number | null, midgame: number | null, endgame: number | null, blunder: any, blunderSquares: string[]}> {
     const chess = new Chess();
-    try { chess.loadPgn(pgn); } catch (e) { return Promise.resolve({overall:0, opening:null, midgame:null, endgame:null, blunder:null}); }
+    try { chess.loadPgn(pgn); } catch (e) { return Promise.resolve({overall:0, opening:null, midgame:null, endgame:null, blunder:null, blunderSquares: []}); }
 
     const isWhite = (chess.header() as any)["White"]?.toLowerCase() === playerUsername.toLowerCase();
     const historySan = chess.history(); 
+    // ⚡ NEW: Get verbose history so we know the exact 'to' and 'from' squares!
+    const historyVerbose = chess.history({ verbose: true }) as any[];
+    
     const fens = [new Chess().fen()]; 
     const tempChess = new Chess();
     historySan.forEach(move => { tempChess.move(move); fens.push(tempChess.fen()); });
@@ -255,6 +277,7 @@ export class App {
     let previousBestMove = "";
     let maxLoss = 0;
     let gameBlunder: any = null;
+    const gameBlunderSquares: string[] = []; // ⚡ NEW: Array to hold all blunders in this game
     
     const openAcc: number[] = [];
     const midAcc: number[] = [];
@@ -276,7 +299,8 @@ export class App {
           opening: calcAvg(openAcc),
           midgame: calcAvg(midAcc),
           endgame: calcAvg(endAcc),
-          blunder: gameBlunder 
+          blunder: gameBlunder,
+          blunderSquares: gameBlunderSquares // ⚡ NEW: Return the squares
         });
       };
 
@@ -314,14 +338,23 @@ export class App {
               else if (moveNumber <= 30) midAcc.push(accuracy);
               else endAcc.push(accuracy);
 
-              // If the loss is worse than 1.5 pawns, record it as a blunder
-              if (loss > 150 && loss > maxLoss) {
-                maxLoss = loss;
-                gameBlunder = {
-                    fen: fens[currentFenIndex - 1], 
-                    playedMove: historySan[currentFenIndex - 1], 
-                    bestMove: previousBestMove 
-                };
+              // ⚡ If the loss is worse than 1.5 pawns, record it!
+              if (loss > 150) {
+                // 1. Save it to our heatmap array
+                const blunderSquare = historyVerbose[currentFenIndex - 1]?.to;
+                if (blunderSquare) {
+                  gameBlunderSquares.push(blunderSquare);
+                }
+
+                // 2. See if it's the absolute WORST blunder for the puzzle tab
+                if (loss > maxLoss) {
+                  maxLoss = loss;
+                  gameBlunder = {
+                      fen: fens[currentFenIndex - 1], 
+                      playedMove: historySan[currentFenIndex - 1], 
+                      bestMove: previousBestMove 
+                  };
+                }
               }
             }
           }
@@ -736,6 +769,25 @@ export class App {
         }
       }
     });
+  }
+
+  getHeatColor(square: string): string {
+    const count = this.blunderData[square] || 0;
+    if (count === 0) return 'transparent'; // No blunders, no color
+
+    // This gives us a percentage from 0.0 to 1.0
+    const ratio = count / this.maxBlunders;
+
+    // ⚡ THE MAGIC MATH: 
+    // Hue 60 is Yellow. Hue 0 is Red.
+    // As the ratio gets higher, the hue shifts from 60 down to 0!
+    const hue = (1 - ratio) * 60; 
+    
+    // We also make the worst squares slightly more solid (less transparent)
+    const alpha = 0.4 + (0.4 * ratio); 
+
+    // Returns a beautiful gradient: hsla(60, 100%, 50%, 0.4) -> hsla(0, 100%, 50%, 0.8)
+    return `hsla(${hue}, 100%, 50%, ${alpha})`;
   }
 
   // --- PLAYER CARD LOGIC ---

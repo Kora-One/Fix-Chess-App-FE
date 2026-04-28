@@ -261,8 +261,35 @@
 
             @if (!pressureLoading && !pressureData?.error && pressureData) {
               <div class="psychology-container">
-                <div class="chart-container radar-wrapper">
-                  <canvas id="pressureChart"></canvas>
+                
+                <div class="charts-row">
+                  <div class="chart-container radar-wrapper">
+                    <canvas id="pressureChart"></canvas>
+                  </div>
+                  
+                  <div class="heatmap-widget">
+                    <h3 class="heatmap-title">Blunder Danger Zones</h3>
+
+                    @if (trendLoading) {
+                      <div class="heatmap-loader-banner">
+                        <div class="circular-spinner"></div>
+                        <p>Mapping in progress...</p>
+                      </div>
+                    }
+                    
+                    <div class="chessboard">
+                      @for (rank of ranks; track rank; let r = $index) {
+                        @for (file of files; track file; let f = $index) {
+                          <div class="square" [ngClass]="(r + f) % 2 === 0 ? 'light-square' : 'dark-square'">
+                            <div class="heat-overlay" [style.backgroundColor]="getHeatColor(file + rank)"></div>
+                            
+                            @if (r === 7) { <span class="coord file-coord">{{ file }}</span> }
+                            @if (f === 0) { <span class="coord rank-coord">{{ rank }}</span> }
+                          </div>
+                        }
+                      }
+                    </div>
+                  </div>
                 </div>
                 
                 <div class="ai-insight-box">

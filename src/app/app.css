@@ -852,10 +852,7 @@ button:disabled {
 .psychology-container {
   display: flex;
   flex-direction: column;
-  min-height: calc(100vh - 220px);
-  
-  position: relative; /* 🔥 IMPORTANT */
-  padding-bottom: 100px; /* space so content doesn't overlap */
+  gap: 36px;
 }
 
 .ai-insight-box {
@@ -864,15 +861,8 @@ button:disabled {
   border-radius: 12px;
   padding: 20px;
   color: #166534;
-
-  position: absolute;   /* 🔥 Key change */
-  bottom: 20px;
-  left: 0;
-  right: 0;
-
-  z-index: 10;
-  box-shadow: 0 -15px 25px rgba(255, 255, 255, 0.9),
-              0 8px 20px rgba(22, 101, 52, 0.15);
+  margin-top: 20px;
+  box-shadow: 0 8px 20px rgba(22, 101, 52, 0.15);
 }
 
 .ai-insight-box h3 {

@@ -891,26 +891,25 @@ button:disabled {
 
 /* --- HEATMAP STYLES --- */
 .charts-row {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: minmax(320px, 600px) minmax(280px, 400px);
   gap: 30px;
   justify-content: center;
   align-items: center;
   width: 100%;
+  max-width: 1030px;
+  margin: 0 auto;
 }
 
 .radar-wrapper {
-  flex: 1;
-  min-width: 300px;
-  max-width: 600px;
+  width: min(100%, 600px);
   height: 450px;
+  justify-self: end;
 }
 
 .heatmap-widget {
-  flex: 1;
-  min-width: 280px;
-  max-width: 400px;
-  width: 100%;
+  width: min(100%, 400px);
+  justify-self: start;
 }
 
 .heatmap-title {
@@ -920,17 +919,33 @@ button:disabled {
   margin-bottom: 15px;
 }
 
+.heatmap-surface {
+  position: relative;
+}
+
+.heatmap-surface.is-loading .chessboard {
+  opacity: 0.42;
+  filter: saturate(0.9);
+}
+
 .heatmap-loader-banner {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  z-index: 3;
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 12px;
-  margin-bottom: 14px;
+  width: calc(100% - 32px);
+  max-width: 280px;
   padding: 12px 16px;
   border: 1px solid rgba(239, 68, 68, 0.18);
   border-radius: 12px;
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.92), rgba(254, 242, 242, 0.96));
-  box-shadow: 0 8px 18px rgba(15, 23, 42, 0.08);
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.88), rgba(254, 242, 242, 0.92));
+  backdrop-filter: blur(4px);
+  box-shadow: 0 8px 18px rgba(15, 23, 42, 0.12);
+  transform: translate(-50%, -50%);
 }
 
 .heatmap-loader-banner p {
@@ -949,6 +964,7 @@ button:disabled {
   border-radius: 6px;
   overflow: hidden; /* Ensures the glass blur doesn't bleed outside the rounded corners */
   box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+  transition: opacity 0.25s ease, filter 0.25s ease;
 }
 
 .square {
@@ -957,9 +973,9 @@ button:disabled {
   height: 100%;
 }
 
-/* Colors matching Chess.com 'Green' theme */
-.light-square { background-color: #eeeed2; }
-.dark-square { background-color: #769656; }
+/* Neutral gray-and-white board theme */
+.light-square { background-color: #f8fafc; }
+.dark-square { background-color: #94a3b8; }
 
 .heat-overlay {
   position: absolute;
@@ -1045,6 +1061,16 @@ button:disabled {
     border-bottom: 2px solid #e2e8f0;
     padding-right: 0;
     padding-bottom: 16px;
+  }
+
+  .charts-row {
+    grid-template-columns: 1fr;
+    max-width: 600px;
+  }
+
+  .radar-wrapper,
+  .heatmap-widget {
+    justify-self: center;
   }
 }
 

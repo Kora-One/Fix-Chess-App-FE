@@ -775,19 +775,13 @@ export class App {
     const count = this.blunderData[square] || 0;
     if (count === 0) return 'transparent'; // No blunders, no color
 
-    // This gives us a percentage from 0.0 to 1.0
+    // Use explicit bands so low-frequency squares always get their own
+    // lighter color instead of collapsing into only a few visible tones.
     const ratio = count / this.maxBlunders;
-
-    // ⚡ THE MAGIC MATH: 
-    // Hue 60 is Yellow. Hue 0 is Red.
-    // As the ratio gets higher, the hue shifts from 60 down to 0!
-    const hue = (1 - ratio) * 60; 
-    
-    // We also make the worst squares slightly more solid (less transparent)
-    const alpha = 0.4 + (0.4 * ratio); 
-
-    // Returns a beautiful gradient: hsla(60, 100%, 50%, 0.4) -> hsla(0, 100%, 50%, 0.8)
-    return `hsla(${hue}, 100%, 50%, ${alpha})`;
+    if (ratio <= 0.20) return '#fff9c7';
+    if (ratio <= 0.40) return '#ffd500';
+    if (ratio <= 0.70) return '#da6201';
+    return '#860f0f';
   }
 
   // --- PLAYER CARD LOGIC ---

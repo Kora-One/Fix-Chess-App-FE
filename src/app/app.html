@@ -1,5 +1,6 @@
 <div class="app-layout">
-  <div class="sidebar">
+  <div class="sidebar-column">
+    <div class="sidebar">
     <h2>Chess Analyzer</h2>
 
     <div class="platform-board">
@@ -16,7 +17,7 @@
     <input
       type="text"
       [(ngModel)]="username"
-      [placeholder]="selectedPlatform ? 'Enter Username' : 'Select platform first...'"
+      [placeholder]="selectedPlatform === 'chesscom' ? 'hikaru' : selectedPlatform === 'lichess' ? 'Pap-G' : 'Select platform first...'"
       [disabled]="!selectedPlatform"
     />
 
@@ -30,13 +31,18 @@
     @if (showMoodError) { <p class="error-text">⚠️ Please choose a mood!</p> }
 
     <div class="settings-row">
-      <label>Games to Analyze (1-30):</label>
+      <label class="settings-label">
+        Games to Analyze<br />
+        <span>(1-30)</span>
+      </label>
       <input type="number" [(ngModel)]="gameCount" min="1" max="30" [disabled]="loading" class="game-count-input" />
     </div>
 
     <button class="btn-analyze" [disabled]="(loading && username === analyzingUsername) || !username" (click)="getAnalysis()">
       {{ (loading && username === analyzingUsername) ? 'Analyzing...' : (loading ? 'Restart Analysis' : 'Analyze Game') }}
     </button>
+    </div>
+
   </div>
 
   <div class="main-content">
@@ -307,6 +313,9 @@
       <div class="empty-state">
         <h3>Ready to Analyze!</h3>
         <p>Select a platform, enter a username, and pick a mood to generate your personalized AI chess report.</p>
+        <div class="empty-state-image-wrap">
+          <img src="/chess-bg.png" alt="Chess background" class="empty-state-image" />
+        </div>
       </div>
     }
   </div>

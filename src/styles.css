@@ -1,15 +1,12 @@
 /* You can add global styles to this file, and also import other style files */
 body {
-  /* Point to the image in your public folder */
-  background-image: url('/chess-bg.png'); 
-  
-  /* Make sure it covers the whole screen nicely */
-  background-size: cover;
-  background-position: center;
-  background-attachment: fixed;
-  background-repeat: no-repeat;
-  
-  /* Remove default browser margins */
+  background:
+    repeating-linear-gradient(45deg, rgba(71, 85, 105, 0.14) 0 1px, transparent 1px 32px),
+    repeating-linear-gradient(-45deg, rgba(71, 85, 105, 0.14) 0 1px, transparent 1px 32px),
+    repeating-linear-gradient(45deg, rgba(255, 255, 255, 0.18) 0 1px, transparent 1px 128px),
+    repeating-linear-gradient(-45deg, rgba(255, 255, 255, 0.18) 0 1px, transparent 1px 128px),
+    radial-gradient(circle at top center, rgba(100, 116, 139, 0.12), transparent 34%),
+    linear-gradient(180deg, #eef2f6 0%, #c4e7cd 60%, #022508 100%);
   margin: 0;
   min-height: 100vh;
   font-family: Arial, sans-serif;

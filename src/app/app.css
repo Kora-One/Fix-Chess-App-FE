@@ -7,6 +7,7 @@
   display: flex;
   gap: 30px;
   width: min(1800px, 96vw);
+  height: 100vh;
   min-height: 100vh;
   max-height: 100vh;
   margin: 0 auto;
@@ -16,15 +17,21 @@
   font-family: 'Segoe UI', Tahoma, sans-serif;
 }
 
-.sidebar {
+.sidebar-column {
   flex: 0 0 min(360px, 28%);
-  background-color: #ffffff;
-  border-radius: 16px;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.sidebar {
+  flex: none;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(248, 250, 252, 0.96));
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  border-radius: 20px;
   padding: 30px;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.04);
-  position: sticky;
-  top: 24px;
-  align-self: start;
+  box-shadow: 0 22px 48px rgba(15, 23, 42, 0.12),
+              0 10px 22px rgba(15, 23, 42, 0.08);
   box-sizing: border-box;
 }
 
@@ -40,6 +47,7 @@
   min-width: 0;
   min-height: 0;
   display: flex;
+  position: relative;
 }
 
 .empty-state,
@@ -51,6 +59,7 @@
   display: flex;
   flex-direction: column;
   justify-content: center;
+  align-items: center;
   text-align: center;
   padding: 80px 20px;
   background: rgba(248, 250, 252, 0.94);
@@ -59,6 +68,24 @@
   color: #64748b;
   min-height: calc(100vh - 48px);
   box-sizing: border-box;
+}
+
+.empty-state-image-wrap {
+  width: min(720px, 100%);
+  margin-bottom: 28px;
+  border-radius: 18px;
+  overflow: hidden;
+  border: 1px solid rgba(148, 163, 184, 0.24);
+  box-shadow: 0 18px 40px rgba(15, 23, 42, 0.12);
+}
+
+.empty-state-image {
+  display: block;
+  width: 100%;
+  max-height: 320px;
+  object-fit: cover;
+  object-position: center;
+  filter: saturate(0.92) contrast(0.98);
 }
 
 .empty-state h3 {
@@ -217,11 +244,12 @@ input:disabled {
 }
 
 .results-container {
-  background-color: rgba(255, 255, 255, 0.96);
-  border-radius: 12px;
-  border: 1px solid #eaeaea;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(248, 250, 252, 0.97));
+  border-radius: 20px;
+  border: 1px solid rgba(148, 163, 184, 0.2);
   overflow: hidden;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.04);
+  box-shadow: 0 26px 60px rgba(15, 23, 42, 0.14),
+              0 12px 26px rgba(15, 23, 42, 0.08);
   height: calc(100vh - 48px);
   display: flex;
   flex-direction: column;
@@ -808,10 +836,19 @@ button:disabled {
   border: 1px solid #e2e8f0;
 }
 
-.settings-row label {
+.settings-label {
+  display: block;
   font-weight: bold;
   color: #475569;
   font-size: 14px;
+  line-height: 1.2;
+  text-align: center;
+}
+
+.settings-label span {
+  font-size: 12px;
+  font-weight: 600;
+  color: #64748b;
 }
 
 .game-count-input {
@@ -1013,13 +1050,17 @@ button:disabled {
   .app-layout {
     flex-direction: column;
     width: min(760px, calc(100vw - 24px));
+    height: auto;
     min-height: auto;
     max-height: none;
     padding: 12px 0 24px;
   }
 
+  .sidebar-column {
+    min-height: auto;
+  }
+
   .sidebar {
-    position: static;
     width: 100%;
   }
 

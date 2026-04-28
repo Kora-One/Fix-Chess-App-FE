@@ -36,5 +36,22 @@
         "animal": "🐆"
       }
     }
+  },
+  "pressure": {
+    "chesscom": {
+      "hikaru": {
+        "attributes": [
+          "Opening Prep",
+          "Endgame Mastery",
+          "Tactics & Patterns",
+          "Material Protection",
+          "Move Accuracy"
+        ],
+        "normalData": [95, 92, 96, 94, 95],
+        "pressureData": [93, 85, 99, 88, 92],
+        "persona": "The Time Scramble King",
+        "aiInsight": "While most players crumble under 30 seconds, your tactical sharpness actually spikes, though your endgame precision drops slightly to prioritize the clock."
+      }
+    }
   }
 }

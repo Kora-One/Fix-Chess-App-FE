@@ -49,6 +49,14 @@ export class App {
   blunderData: { [square: string]: number } = {};
   maxBlunders = 0;
 
+  heatmapFlipped = false;
+  get displayRanks() { return this.heatmapFlipped ? [...this.ranks].reverse() : this.ranks; }
+  get displayFiles() { return this.heatmapFlipped ? [...this.files].reverse() : this.files; }
+
+  flipHeatmap() {
+    this.heatmapFlipped = !this.heatmapFlipped;
+  }
+
   // --- Pressure Profile State ---
   pressureChart: any;
   pressureLoading = false;

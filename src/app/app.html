@@ -274,12 +274,21 @@
                   </div>
                   
                   <div class="heatmap-widget">
-                    <h3 class="heatmap-title">Blunder Danger Zones</h3>
+                    
+                    <!-- ⚡ NEW: Header with Title and Flip Button -->
+                    <div class="heatmap-header">
+                      <h3 class="heatmap-title">Blunder Danger Zones</h3>
+                      <button class="btn-icon-flip" (click)="flipHeatmap()" title="Flip Board">🔄</button>
+                    </div>
+
+                    <!-- ⚡ NEW: Dynamic Top Label -->
+                    <div class="board-side-label">{{ heatmapFlipped ? "White's Side" : "Black's Side" }}</div>
 
                     <div class="heatmap-surface" [class.is-loading]="trendLoading">
                       <div class="chessboard">
-                        @for (rank of ranks; track rank; let r = $index) {
-                          @for (file of files; track file; let f = $index) {
+                        <!-- ⚡ NEW: Using displayRanks and displayFiles so it flips automatically! -->
+                        @for (rank of displayRanks; track rank; let r = $index) {
+                          @for (file of displayFiles; track file; let f = $index) {
                             <div class="square" [ngClass]="(r + f) % 2 === 0 ? 'light-square' : 'dark-square'">
                               <div class="heat-overlay" [style.backgroundColor]="getHeatColor(file + rank)"></div>
                               
@@ -297,6 +306,10 @@
                         </div>
                       }
                     </div>
+                    
+                    <!-- ⚡ NEW: Dynamic Bottom Label -->
+                    <div class="board-side-label">{{ heatmapFlipped ? "Black's Side" : "White's Side" }}</div>
+                    
                   </div>
                 </div>
                 

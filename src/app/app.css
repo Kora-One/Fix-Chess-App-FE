@@ -994,6 +994,46 @@ button:disabled {
   transition: opacity 0.25s ease, filter 0.25s ease;
 }
 
+/* --- HEATMAP FLIP & LABELS --- */
+.heatmap-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 5px;
+}
+
+.heatmap-title {
+  margin: 0; /* Removed margin so it aligns perfectly with the button */
+}
+
+.btn-icon-flip {
+  background: #e2e8f0;
+  border: none;
+  border-radius: 6px;
+  padding: 6px 12px;
+  cursor: pointer;
+  font-size: 1.2em;
+  transition: all 0.2s ease-in-out;
+}
+
+.btn-icon-flip:hover {
+  background: #cbd5e1;
+  transform: rotate(180deg); /* Adds a fun little spin effect on hover! */
+}
+
+.board-side-label {
+  text-align: center;
+  font-size: 0.8em;
+  font-weight: 800;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  margin: 8px 0;
+  background: #f1f5f9;
+  padding: 4px;
+  border-radius: 4px;
+}
+
 .square {
   position: relative;
   width: 100%;

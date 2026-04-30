@@ -269,13 +269,22 @@
               <div class="psychology-container">
                 
                 <div class="charts-row">
-                  <div class="chart-container radar-wrapper">
-                    <canvas id="pressureChart"></canvas>
+                  <div class="radar-widget-container" style="width: 100%;">
+                    
+                    <!-- We use the exact same header classes, plus radar-header to center it -->
+                    <div class="heatmap-header radar-header">
+                      <h3 class="heatmap-title">Performance Under Pressure</h3>
+                    </div>
+                    
+                    <div class="chart-container radar-wrapper">
+                      <canvas id="pressureChart"></canvas>
+                    </div>
                   </div>
                   
+                  <!-- ⚡ RIGHT COLUMN: Heatmap -->
                   <div class="heatmap-widget">
                     
-                    <!-- ⚡ NEW: Header with Title and Flip Button -->
+                    <!-- The exact same header class, so they align perfectly! -->
                     <div class="heatmap-header">
                       <h3 class="heatmap-title">Blunder Danger Zones</h3>
                       <button class="btn-icon-flip" (click)="flipHeatmap()" title="Flip Board">🔄</button>

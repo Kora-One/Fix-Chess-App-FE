@@ -35,11 +35,26 @@
   box-sizing: border-box;
 }
 
+/* --- MAIN APP TITLE --- */
 .sidebar h2 {
-  color: #2c2c2c;
   margin-top: 0;
-  text-align: center;
   margin-bottom: 25px;
+  text-align: center;
+  font-size: 2.2rem;
+  font-weight: 900;
+  letter-spacing: -0.5px;
+  
+  /* 🟢 Default: A beautiful vibrant green gradient */
+  background: linear-gradient(135deg, #4caf50 0%, #2e7d32 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  
+  /* A soft glowing drop shadow behind the text */
+  filter: drop-shadow(0px 4px 6px rgba(76, 175, 80, 0.2));
+  
+  /* Ensures a buttery smooth crossfade when the theme changes */
+  transition: all 0.5s ease-in-out;
 }
 
 .main-content {
@@ -916,13 +931,12 @@ button:disabled {
   margin-bottom: 0;
 }
 
-/* --- HEATMAP STYLES --- */
 .charts-row {
   display: grid;
   grid-template-columns: minmax(320px, 600px) minmax(280px, 400px);
   gap: 30px;
   justify-content: center;
-  align-items: center;
+  align-items: flex-start; /* ⚡ THE FIX: Forces both columns to align at the top edge */
   width: 100%;
   max-width: 1030px;
   margin: 0 auto;
@@ -940,10 +954,10 @@ button:disabled {
 }
 
 .heatmap-title {
-  text-align: center;
+  margin: 0; 
   color: #334155;
-  margin-top: 0;
-  margin-bottom: 15px;
+  font-size: 1.25em;
+  font-weight: 800; /* Makes both titles equally bold and premium */
 }
 
 .heatmap-surface {
@@ -999,7 +1013,8 @@ button:disabled {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 5px;
+  margin-bottom: 15px; 
+  min-height: 40px; /* ⚡ THE FIX: Forces both headers to be the exact same height */
 }
 
 .heatmap-title {
@@ -1007,7 +1022,7 @@ button:disabled {
 }
 
 .btn-icon-flip {
-  background: #e2e8f0;
+  background: #ffffff;
   border: none;
   border-radius: 6px;
   padding: 6px 12px;
@@ -1084,6 +1099,10 @@ button:disabled {
 
 @media (max-width: 700px) {
   .radar-wrapper { height: 350px; }
+}
+
+.radar-header {
+  justify-content: center;
 }
 
 @media (max-width: 1000px) {
@@ -1241,4 +1260,75 @@ button:disabled {
   50% {
     transform: translateX(5px);
   }
+}
+
+/* --- THEME OVERRIDES (The Angular Way) --- */
+
+/* Changes the Analyze button to Lichess Brown when the body has the theme class */
+:host-context(.theme-lichess) .btn-analyze {
+  background-color: #b58863 !important; /* Lichess Wood Color */
+  box-shadow: 0 4px 12px rgba(181, 136, 99, 0.3) !important;
+}
+
+:host-context(.theme-lichess) .btn-analyze:hover {
+  background-color: #9e7350 !important; /* Slightly darker brown on hover */
+  box-shadow: 0 6px 16px rgba(181, 136, 99, 0.4) !important;
+}
+
+/* Changes the Username Input focus outline to Lichess Brown */
+:host-context(.theme-lichess) input:focus {
+  border-color: #b58863 !important;
+  /* Adds a premium, subtle brown glow around the box when clicked */
+  box-shadow: 0 0 0 3px rgba(181, 136, 99, 0.2) !important; 
+}
+
+/* --- LICHESS THEME: TABS & INSIGHT BOX --- */
+
+/* 1. Changes the Active Tab to have a Lichess Brown font and underline */
+:host-context(.theme-lichess) .tab-header button.active {
+  background-color: transparent !important; /* Removes the solid block color */
+  color: #b58863 !important;                /* Makes the font Lichess Brown */
+  
+  /* Clears old borders and adds a crisp 3px underline */
+  border: none !important; 
+  border-bottom: 3px solid #b58863 !important; 
+  
+  /* Removes shadows and rounds off top corners for a clean tab look */
+  box-shadow: none !important; 
+  border-radius: 6px 6px 0 0 !important; 
+}
+
+/* Optional: Add a subtle brown hover effect for inactive tabs! */
+:host-context(.theme-lichess) .tab-header button:not(.active):hover {
+  color: #9e7350 !important;
+  background-color: rgba(181, 136, 99, 0.05) !important;
+}
+
+/* 2. Changes the AI Insight Box to a solid brown block (Wipes out the green tint!) */
+:host-context(.theme-lichess) .ai-insight-box {
+  background: #b48660 !important;       /* ⚡ CHANGED: Using 'background' destroys any lingering gradients/tints */
+  border-color: #9e7350 !important;     
+  color: #ffffff !important;            
+  box-shadow: 0 6px 15px rgba(181, 136, 99, 0.25) !important; 
+}
+
+/* 3. Ensures the text inside has NO background color and is pure white */
+:host-context(.theme-lichess) .ai-insight-box h3,
+:host-context(.theme-lichess) .ai-insight-box p,
+:host-context(.theme-lichess) .ai-insight-box b {
+  background: transparent !important;   /* ⚡ NEW: Forces inner elements to drop their green tint */
+  color: #ffffff !important; 
+}
+
+/* ⚡ Kills the green dividing line under the AI Profile title */
+:host-context(.theme-lichess) .ai-insight-box h3 {
+  border-bottom: 2px solid #9e7350 !important; /* Uses a darker brown for a crisp divider */
+}
+
+/* Changes the Main Heading to a rich Wood-Brown gradient */
+:host-context(.theme-lichess) .sidebar h2 {
+  background: linear-gradient(135deg, #b58863 0%, #8c6445 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  filter: drop-shadow(0px 4px 6px rgba(181, 136, 99, 0.2));
 }

@@ -97,7 +97,18 @@ export class App {
 
   constructor(private http: HttpClient, private cdr: ChangeDetectorRef) {}
 
-  selectPlatform(p: string) { this.selectedPlatform = p; this.showPlatformError = false; }
+  selectPlatform(p: string) { 
+    this.selectedPlatform = p; 
+    this.showPlatformError = false; 
+
+    // ⚡ NEW: Toggle a global theme class on the body to trigger the 3D floor fade!
+    if (p === 'lichess') {
+      document.body.classList.add('theme-lichess');
+    } else {
+      document.body.classList.remove('theme-lichess');
+    }
+  }
+
   selectMood(m: string) { this.selectedMood = m; this.showMoodError = false; }
 
   switchTab(tab: string) { 
@@ -754,7 +765,7 @@ export class App {
         plugins: {
           // ⚡ NEW: The Radar Chart Title
           title: {
-            display: true,
+            display: false,
             text: 'Performance Under Pressure',
             color: '#000000', // A nice dark green to match the AI Insight box!
             font: { size: 20, weight: 'bolder' },

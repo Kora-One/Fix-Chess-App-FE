@@ -675,8 +675,7 @@ export class App {
         }, 400);
         return; // Exit early so we don't hit the `finally` block instantly
       }
-    } catch (e) {
-      console.error("Failed to fetch pressure profile", e);
+    } catch {
     } 
     
     // Fallback if there's an error
@@ -690,20 +689,16 @@ export class App {
   }
 
   drawPressureChart() {
-    console.log("🟨 [DEBUG] drawPressureChart called. Looking for canvas...");
     const canvas = document.getElementById('pressureChart') as HTMLCanvasElement;
     
     if (!canvas) {
-      console.error("🟥 [DEBUG] FAIL: <canvas id='pressureChart'> is NOT in the DOM!");
       return;
     }
     
     if (!this.pressureData) {
-      console.error("🟥 [DEBUG] FAIL: this.pressureData is null or empty!");
       return;
     }
 
-    console.log("🟩 [DEBUG] Canvas found! Drawing Chart...");
     this.pressureChart = new Chart(canvas, {
       type: 'radar',
       data: {
@@ -890,7 +885,6 @@ export class App {
     const cardElement = document.getElementById('player-card-export');
     
     if (!cardElement) {
-      console.error('Could not find the player card element!');
       return;
     }
 
@@ -909,8 +903,7 @@ export class App {
       link.download = `${this.analyzingUsername}-FixChess-Card.png`;
       link.click();
       
-    } catch (error) {
-      console.error('Failed to generate player card:', error);
+    } catch {
       alert('Oops! Something went wrong while generating your card. Please try again.');
     }
   }

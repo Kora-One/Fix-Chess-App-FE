@@ -1,16 +1,76 @@
-/* You can add global styles to this file, and also import other style files */
 body {
-  /* Point to the image in your public folder */
-  background-image: url('/chess-bg.png'); 
-  
-  /* Make sure it covers the whole screen nicely */
-  background-size: cover;
-  background-position: center;
-  background-attachment: fixed;
-  background-repeat: no-repeat;
-  
-  /* Remove default browser margins */
+  background-color: #f8fafc; 
   margin: 0;
   min-height: 100vh;
-  font-family: Arial, sans-serif;
+  /* ⚡ Ensure body doesn't have any perspective left over */
+  perspective: none !important;
+  overflow-x: hidden; 
 }
+
+/* ⚡ UPDATED 3D LOGIC: Tilts from Left to Right */
+/* ⚡ 3/4 PERSPECTIVE FLOOR: Angled Left-to-Right */
+body::before,
+body::after {
+  content: "";
+  position: fixed; 
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  z-index: -1; 
+  
+  background-size: 150px 150px; 
+  background-position: 0px 0px;
+  
+  /* ⚡ THE DUAL-AXIS TRANSFORM:
+     1. rotateX(60deg) lays it down flat.
+     2. rotateY(20deg) tilts the whole floor so the left side looks closer.
+     3. scale(1.5) ensures the corners stay filled during the double-tilt. */
+  transform: perspective(1200px) rotateX(60deg) rotateY(20deg) scale(1.5);
+  
+  /* ⚡ CORNER FADE: Fades out toward the top-right corner (the horizon) */
+  -webkit-mask-image: radial-gradient(circle at bottom left, black 30%, transparent 80%);
+  mask-image: radial-gradient(circle at bottom left, black 30%, transparent 80%);
+  
+  transition: opacity 1.5s ease-in-out; 
+}
+
+/* 🟢 FLOOR 1: Chess.com Green (Visible by default) */
+body::before {
+  background-image: conic-gradient(
+    from 45deg,
+    rgba(118, 150, 86, 0.25) 25%,
+    transparent 25% 50%,
+    rgba(118, 150, 86, 0.25) 50% 75%,
+    transparent 75%
+  );
+  opacity: 1; 
+}
+
+/* 🟤 FLOOR 2: Lichess Brown (Hidden by default) */
+body::after {
+  /* Using the classic Lichess Wood color: #b58863 */
+  background-image: conic-gradient(
+    from 45deg,
+    rgba(181, 136, 99, 0.25) 25%,
+    transparent 25% 50%,
+    rgba(181, 136, 99, 0.25) 50% 75%,
+    transparent 75%
+  );
+  opacity: 0; 
+}
+
+/* ⚡ THE TRIGGER: When Angular adds this class, the floors swap opacities! */
+body.theme-lichess::before {
+  opacity: 0;
+}
+
+body.theme-lichess::after {
+  opacity: 1;
+}
+
+/* Optional: Keep your animation ready for the future! */
+/* @keyframes moveFloor {
+  from { background-position: 0px 0px; }
+  to { background-position: 0px 150px; }
+} */

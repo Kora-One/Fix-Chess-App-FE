@@ -1,5 +1,6 @@
 <div class="app-layout">
-  <div class="sidebar">
+  <div class="sidebar-column">
+    <div class="sidebar">
     <h2>Chess Analyzer</h2>
 
     <div class="platform-board">
@@ -16,7 +17,7 @@
     <input
       type="text"
       [(ngModel)]="username"
-      [placeholder]="selectedPlatform ? 'Enter Username' : 'Select platform first...'"
+      [placeholder]="selectedPlatform === 'chesscom' ? 'hikaru' : selectedPlatform === 'lichess' ? 'Pap-G' : 'Select platform first...'"
       [disabled]="!selectedPlatform"
     />
 
@@ -30,13 +31,18 @@
     @if (showMoodError) { <p class="error-text">⚠️ Please choose a mood!</p> }
 
     <div class="settings-row">
-      <label>Games to Analyze (1-30):</label>
+      <label class="settings-label">
+        Games to Analyze<br />
+        <span>(1-30)</span>
+      </label>
       <input type="number" [(ngModel)]="gameCount" min="1" max="30" [disabled]="loading" class="game-count-input" />
     </div>
 
     <button class="btn-analyze" [disabled]="(loading && username === analyzingUsername) || !username" (click)="getAnalysis()">
       {{ (loading && username === analyzingUsername) ? 'Analyzing...' : (loading ? 'Restart Analysis' : 'Analyze Game') }}
     </button>
+    </div>
+
   </div>
 
   <div class="main-content">
@@ -47,13 +53,14 @@
           <button [class.active]="activeTab === 'trend'" (click)="switchTab('trend')">📊 {{ gameCount }}-Game Trend</button>
           <button [class.active]="activeTab === 'openings'" (click)="switchTab('openings')">🎯 Openings</button>
           <button [class.active]="activeTab === 'puzzles'" (click)="switchTab('puzzles')">🔥 Fix Blunders</button>
+          <button [class.active]="activeTab === 'psychology'" (click)="switchTab('psychology')">🧠 Psychology</button>
         </div>
 
         <div class="tab-panels">
           <div class="tab-content" [class.hidden]="activeTab !== 'analysis'">
             @if (loading) {
               <div class="loader-container">
-                <p>Gemini is writing your report... {{ progressPercentage | number:'1.0-0' }}%</p>
+                <p>Writing your report... {{ progressPercentage | number:'1.0-0' }}%</p>
                 <div class="progress-bar-bg"><div class="progress-bar-fill" [style.width.%]="progressPercentage"></div></div>
               </div>
             }
@@ -239,12 +246,98 @@
               </div>
             }
           </div>
+
+          <div class="tab-content" [class.hidden]="activeTab !== 'psychology'">
+            @if (pressureLoading) {
+              <div class="loader-container stockfish-loader">
+                <p>Mapping your psychological pressure points... {{ pressureProgress | number:'1.0-0' }}%</p>
+                
+                <div class="progress-bar-bg">
+                  <div class="progress-bar-fill stockfish-fill" [style.width.%]="pressureProgress"></div>
+                </div>
+              </div>
+            }
+
+            @if (pressureData?.error && !pressureLoading) {
+              <div class="status-card status-card-error">
+                <h3>⚠️ Data Incomplete</h3>
+                <p>We couldn't generate a pressure profile. Try playing more games!</p>
+              </div>
+            }
+
+            @if (!pressureLoading && !pressureData?.error && pressureData) {
+              <div class="psychology-container">
+                
+                <div class="charts-row">
+                  <div class="radar-widget-container" style="width: 100%;">
+                    
+                    <!-- We use the exact same header classes, plus radar-header to center it -->
+                    <div class="heatmap-header radar-header">
+                      <h3 class="heatmap-title">Performance Under Pressure</h3>
+                    </div>
+                    
+                    <div class="chart-container radar-wrapper">
+                      <canvas id="pressureChart"></canvas>
+                    </div>
+                  </div>
+                  
+                  <!-- ⚡ RIGHT COLUMN: Heatmap -->
+                  <div class="heatmap-widget">
+                    
+                    <!-- The exact same header class, so they align perfectly! -->
+                    <div class="heatmap-header">
+                      <h3 class="heatmap-title">Blunder Danger Zones</h3>
+                      <button class="btn-icon-flip" (click)="flipHeatmap()" title="Flip Board">🔄</button>
+                    </div>
+
+                    <!-- ⚡ NEW: Dynamic Top Label -->
+                    <div class="board-side-label">{{ heatmapFlipped ? "White's Side" : "Black's Side" }}</div>
+
+                    <div class="heatmap-surface" [class.is-loading]="trendLoading">
+                      <div class="chessboard">
+                        <!-- ⚡ NEW: Using displayRanks and displayFiles so it flips automatically! -->
+                        @for (rank of displayRanks; track rank; let r = $index) {
+                          @for (file of displayFiles; track file; let f = $index) {
+                            <div class="square" [ngClass]="(r + f) % 2 === 0 ? 'light-square' : 'dark-square'">
+                              <div class="heat-overlay" [style.backgroundColor]="getHeatColor(file + rank)"></div>
+                              
+                              @if (r === 7) { <span class="coord file-coord">{{ file }}</span> }
+                              @if (f === 0) { <span class="coord rank-coord">{{ rank }}</span> }
+                            </div>
+                          }
+                        }
+                      </div>
+
+                      @if (trendLoading) {
+                        <div class="heatmap-loader-banner">
+                          <div class="circular-spinner"></div>
+                          <p>Mapping in progress...</p>
+                        </div>
+                      }
+                    </div>
+                    
+                    <!-- ⚡ NEW: Dynamic Bottom Label -->
+                    <div class="board-side-label">{{ heatmapFlipped ? "Black's Side" : "White's Side" }}</div>
+                    
+                  </div>
+                </div>
+                
+                <div class="ai-insight-box">
+                  <h3>AI Profile: {{ pressureData.persona }}</h3>
+                  <p><b>Insight:</b> "{{ pressureData.aiInsight }}"</p>
+                </div>
+              </div>
+            }
+          </div>
         </div>
       </div>
     } @else {
       <div class="empty-state">
         <h3>Ready to Analyze!</h3>
         <p>Select a platform, enter a username, and pick a mood to generate your personalized AI chess report.</p>
+        <div class="empty-state-image-wrap">
+          <img src="/chess-bg.png" alt="Chess background" class="empty-state-image" />
+        </div>
       </div>
     }
   </div>

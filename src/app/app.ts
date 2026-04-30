@@ -1,5 +1,5 @@
 import { Component, ChangeDetectorRef, ViewChild, ElementRef, CUSTOM_ELEMENTS_SCHEMA } from '@angular/core';
-import { DecimalPipe } from '@angular/common'; 
+import { DecimalPipe, JsonPipe, NgClass } from '@angular/common'; 
 import { FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
 import { firstValueFrom, from, Subscription } from 'rxjs'; 
@@ -25,7 +25,7 @@ type MockApiData = {
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [DecimalPipe, FormsModule], 
+  imports: [DecimalPipe, FormsModule, JsonPipe, NgClass], 
   schemas: [CUSTOM_ELEMENTS_SCHEMA], // Tells Angular to allow native <chess-board> HTML tags
   templateUrl: './app.html',
   styleUrls: ['./app.css']
@@ -43,10 +43,31 @@ export class App {
   activeTab = 'analysis';
   noGamesFound = false;
 
+  // --- Heatmap Variables ---
+  files = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'];
+  ranks = [8, 7, 6, 5, 4, 3, 2, 1]; // Reversed so 8 is at top
+  blunderData: { [square: string]: number } = {};
+  maxBlunders = 0;
+
+  heatmapFlipped = false;
+  get displayRanks() { return this.heatmapFlipped ? [...this.ranks].reverse() : this.ranks; }
+  get displayFiles() { return this.heatmapFlipped ? [...this.files].reverse() : this.files; }
+
+  flipHeatmap() {
+    this.heatmapFlipped = !this.heatmapFlipped;
+  }
+
+  // --- Pressure Profile State ---
+  pressureChart: any;
+  pressureLoading = false;
+  pressureData: any = null;
+
   // --- Loading & Graph State ---
   loading = false;
   progressPercentage = 0;
   private progressInterval: any;
+  pressureProgress = 0;         // ⚡ NEW
+  private pressureInterval: any; // ⚡ NEW
   
   trendChart: any;
   openChart: any;
@@ -76,7 +97,18 @@ export class App {
 
   constructor(private http: HttpClient, private cdr: ChangeDetectorRef) {}
 
-  selectPlatform(p: string) { this.selectedPlatform = p; this.showPlatformError = false; }
+  selectPlatform(p: string) { 
+    this.selectedPlatform = p; 
+    this.showPlatformError = false; 
+
+    // ⚡ NEW: Toggle a global theme class on the body to trigger the 3D floor fade!
+    if (p === 'lichess') {
+      document.body.classList.add('theme-lichess');
+    } else {
+      document.body.classList.remove('theme-lichess');
+    }
+  }
+
   selectMood(m: string) { this.selectedMood = m; this.showMoodError = false; }
 
   switchTab(tab: string) { 
@@ -89,7 +121,11 @@ export class App {
         if (this.midChart) this.midChart.resize();
         if (this.endChart) this.endChart.resize();
       } else if (tab === 'puzzles' && this.puzzles.length > 0) {
-        this.loadPuzzle(this.currentPuzzleIndex); // Load the board when tab is clicked
+        this.loadPuzzle(this.currentPuzzleIndex); 
+      } else if (tab === 'psychology') {
+        if (this.pressureData && !this.pressureData.error) {
+          this.drawPressureChart(); 
+        }
       }
     }, 50);
   }
@@ -125,6 +161,7 @@ export class App {
     this.generateTrendGraph(pgnsPromise);
     this.generateOpeningGraph(pgnsPromise);
     this.fetchPlayerStats();
+    this.fetchPressureProfile();
 
     this.analysisSub = from(
       this.getAnalysisReport(this.selectedPlatform, this.username, this.selectedMood, this.gameCount)
@@ -187,6 +224,9 @@ export class App {
     const accEnd: (number | null)[] = [];
     const gameLabels: string[] = [];
 
+    this.blunderData = {};
+    this.maxBlunders = 0;
+
     for (let i = 0; i < pgns.length; i++) {
       if (this.currentAnalysisId !== thisAnalysis) return; 
       
@@ -198,12 +238,22 @@ export class App {
       accEnd.push(result.endgame);
       gameLabels.push(`Game ${i + 1}`);
 
-      // Extract the worst blunder from this game for the puzzle tab
+      // Extract the worst blunder for the puzzle tab
       if (result.blunder) {
         this.puzzles.push({
           ...result.blunder,
           gameNumber: i + 1,
           status: 'pending' 
+        });
+      }
+
+      // ⚡ NEW: Add all blunder squares from this game to the Heatmap!
+      if (result.blunderSquares && result.blunderSquares.length > 0) {
+        result.blunderSquares.forEach(sq => {
+          this.blunderData[sq] = (this.blunderData[sq] || 0) + 1;
+          if (this.blunderData[sq] > this.maxBlunders) {
+            this.maxBlunders = this.blunderData[sq];
+          }
         });
       }
       
@@ -226,12 +276,15 @@ export class App {
     }, 50);
   }
 
-  calculateSingleGameAccuracy(pgn: string, playerUsername: string): Promise<{overall: number, opening: number | null, midgame: number | null, endgame: number | null, blunder: any}> {
+  calculateSingleGameAccuracy(pgn: string, playerUsername: string): Promise<{overall: number, opening: number | null, midgame: number | null, endgame: number | null, blunder: any, blunderSquares: string[]}> {
     const chess = new Chess();
-    try { chess.loadPgn(pgn); } catch (e) { return Promise.resolve({overall:0, opening:null, midgame:null, endgame:null, blunder:null}); }
+    try { chess.loadPgn(pgn); } catch (e) { return Promise.resolve({overall:0, opening:null, midgame:null, endgame:null, blunder:null, blunderSquares: []}); }
 
     const isWhite = (chess.header() as any)["White"]?.toLowerCase() === playerUsername.toLowerCase();
     const historySan = chess.history(); 
+    // ⚡ NEW: Get verbose history so we know the exact 'to' and 'from' squares!
+    const historyVerbose = chess.history({ verbose: true }) as any[];
+    
     const fens = [new Chess().fen()]; 
     const tempChess = new Chess();
     historySan.forEach(move => { tempChess.move(move); fens.push(tempChess.fen()); });
@@ -243,6 +296,7 @@ export class App {
     let previousBestMove = "";
     let maxLoss = 0;
     let gameBlunder: any = null;
+    const gameBlunderSquares: string[] = []; // ⚡ NEW: Array to hold all blunders in this game
     
     const openAcc: number[] = [];
     const midAcc: number[] = [];
@@ -264,7 +318,8 @@ export class App {
           opening: calcAvg(openAcc),
           midgame: calcAvg(midAcc),
           endgame: calcAvg(endAcc),
-          blunder: gameBlunder 
+          blunder: gameBlunder,
+          blunderSquares: gameBlunderSquares // ⚡ NEW: Return the squares
         });
       };
 
@@ -302,14 +357,23 @@ export class App {
               else if (moveNumber <= 30) midAcc.push(accuracy);
               else endAcc.push(accuracy);
 
-              // If the loss is worse than 1.5 pawns, record it as a blunder
-              if (loss > 150 && loss > maxLoss) {
-                maxLoss = loss;
-                gameBlunder = {
-                    fen: fens[currentFenIndex - 1], 
-                    playedMove: historySan[currentFenIndex - 1], 
-                    bestMove: previousBestMove 
-                };
+              // ⚡ If the loss is worse than 1.5 pawns, record it!
+              if (loss > 150) {
+                // 1. Save it to our heatmap array
+                const blunderSquare = historyVerbose[currentFenIndex - 1]?.to;
+                if (blunderSquare) {
+                  gameBlunderSquares.push(blunderSquare);
+                }
+
+                // 2. See if it's the absolute WORST blunder for the puzzle tab
+                if (loss > maxLoss) {
+                  maxLoss = loss;
+                  gameBlunder = {
+                      fen: fens[currentFenIndex - 1], 
+                      playedMove: historySan[currentFenIndex - 1], 
+                      bestMove: previousBestMove 
+                  };
+                }
               }
             }
           }
@@ -523,7 +587,22 @@ export class App {
           borderWidth: 3, pointBackgroundColor: '#2563eb', pointRadius: 5, fill: true, tension: 0.4 
         }]
       },
-      options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { min: 0, max: 100 } } }
+      options: { 
+        responsive: true, 
+        maintainAspectRatio: false, 
+        plugins: { 
+          legend: { display: false },
+          // ⚡ NEW: The Main Trend Title
+          title: {
+            display: true,
+            text: `Overall Accuracy Trend (Last ${this.gameCount} Games)`,
+            color: '#334155',
+            font: { size: 16, weight: 'bold' },
+            padding: { bottom: 20 } // Adds some breathing room below the title
+          }
+        }, 
+        scales: { y: { min: 0, max: 100 } } 
+      }
     });
   }
 
@@ -578,6 +657,145 @@ export class App {
     clearInterval(this.progressInterval); 
     this.progressPercentage = 100; 
     setTimeout(() => { this.loading = false; this.cdr.detectChanges(); }, 600); 
+  }
+
+  // --- PSYCHOLOGICAL PROFILE (RADAR CHART) ---
+  async fetchPressureProfile() {
+    this.pressureLoading = true;
+    this.pressureData = null;
+    this.pressureProgress = 0;
+    if (this.pressureChart) this.pressureChart.destroy();
+
+    // ⚡ NEW: Start the fake progress loader
+    this.pressureInterval = setInterval(() => {
+      if (this.pressureProgress < 95) {
+        this.pressureProgress = Math.min(this.pressureProgress + (Math.random() * 3), 95);
+        this.cdr.detectChanges();
+      }
+    }, 250);
+
+    try {
+      const url = `${environment.apiUrl}/pressure/${this.selectedPlatform}/${this.username}?limit=${this.gameCount}`;
+      this.pressureData = await firstValueFrom(this.http.get(url));
+
+      if (!this.pressureData.error) {
+        // ⚡ NEW: Stop the timer and snap to 100%
+        clearInterval(this.pressureInterval);
+        this.pressureProgress = 100;
+        this.cdr.detectChanges();
+        
+        // Wait 400ms to let the user see it hit 100% before drawing the chart
+        setTimeout(() => {
+          this.pressureLoading = false; 
+          this.cdr.detectChanges(); 
+          if (this.activeTab === 'psychology') {
+            this.drawPressureChart();
+          }
+        }, 400);
+        return; // Exit early so we don't hit the `finally` block instantly
+      }
+    } catch {
+    } 
+    
+    // Fallback if there's an error
+    clearInterval(this.pressureInterval);
+    this.pressureProgress = 100;
+    this.cdr.detectChanges();
+    setTimeout(() => {
+      this.pressureLoading = false;
+      this.cdr.detectChanges();
+    }, 400);
+  }
+
+  drawPressureChart() {
+    const canvas = document.getElementById('pressureChart') as HTMLCanvasElement;
+    
+    if (!canvas) {
+      return;
+    }
+    
+    if (!this.pressureData) {
+      return;
+    }
+
+    this.pressureChart = new Chart(canvas, {
+      type: 'radar',
+      data: {
+        labels: this.pressureData.attributes,
+        datasets: [
+          {
+            label: 'Normal Mode (>60s)',
+            data: this.pressureData.normalData,
+            backgroundColor: 'rgba(59, 130, 246, 0.4)', // Blue
+            borderColor: '#3b82f6',
+            pointBackgroundColor: '#3b82f6',
+            borderWidth: 2,
+            fill: true
+          },
+          {
+            label: 'Under Pressure (<30s)',
+            data: this.pressureData.pressureData,
+            backgroundColor: 'rgba(239, 68, 68, 0.5)', // Red
+            borderColor: '#ef4444',
+            pointBackgroundColor: '#ef4444',
+            borderWidth: 2,
+            fill: true
+          }
+        ]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        // ⚡ NEW: The Animation Config!
+        animation: {
+          duration: 1500,               // 1.5 seconds for a smooth, visible growth
+          easing: 'easeOutQuart',     // Gives it a satisfying "spring" or bounce from the center
+          delay: 200                    // Small delay so the user sees it start after the tab switches
+        },
+        scales: {
+          r: {
+            min: 0,   // ⚡ Moved out of ticks
+            max: 100, // ⚡ Moved out of ticks
+            angleLines: { color: 'rgba(0, 0, 0, 0.1)' },
+            grid: { color: 'rgba(0, 0, 0, 0.1)' },
+            pointLabels: { color: '#334155', font: { size: 15, weight: 'bold' } },
+            ticks: { stepSize: 25, display: false } // Only stepSize and display stay here
+          }
+        },
+        plugins: {
+          // ⚡ NEW: The Radar Chart Title
+          title: {
+            display: false,
+            text: 'Performance Under Pressure',
+            color: '#000000', // A nice dark green to match the AI Insight box!
+            font: { size: 20, weight: 'bolder' },
+            padding: { bottom: 25 }
+          },
+          legend: { 
+            position: 'bottom',   // ⚡ Places it on the right-hand side of the chart
+            align: 'center',        // ⚡ Pushes it towards the bottom-right corner
+            labels: { 
+              usePointStyle: true, 
+              font: { weight: 'bold' },
+              padding: 20
+            } 
+          }
+        }
+      }
+    });
+  }
+
+  getHeatColor(square: string): string {
+    const count = this.blunderData[square] || 0;
+    if (count === 0) return 'transparent'; // No blunders, no color
+
+    // Use explicit bands so low-frequency squares always get their own
+    // lighter color instead of collapsing into only a few visible tones.
+    const ratio = count / this.maxBlunders;
+    if (ratio <= 0.20) return '#fff9c7';
+    if (ratio <= 0.40) return '#ffd500';
+    if (ratio <= 0.70) return '#da6201';
+    return '#860f0f';
   }
 
   // --- PLAYER CARD LOGIC ---
@@ -686,7 +904,6 @@ export class App {
     const cardElement = document.getElementById('player-card-export');
     
     if (!cardElement) {
-      console.error('Could not find the player card element!');
       return;
     }
 
@@ -705,8 +922,7 @@ export class App {
       link.download = `${this.analyzingUsername}-FixChess-Card.png`;
       link.click();
       
-    } catch (error) {
-      console.error('Failed to generate player card:', error);
+    } catch {
       alert('Oops! Something went wrong while generating your card. Please try again.');
     }
   }
